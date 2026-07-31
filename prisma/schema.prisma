@@ -150,7 +150,8 @@ model Customer {
 
   orders Order[]
 
-  @@index([storeId, email])
+  @@unique([storeId, email])
+  @@unique([storeId, phone])
   @@index([storeId, createdAt])
   @@map("customers")
 }
