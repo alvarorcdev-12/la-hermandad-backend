@@ -28,7 +28,7 @@ export class CustomersMapper {
 
     return {
       id: customer.id,
-      displayName: `${customer.firstName} ${customer.lastName ?? ''}`,
+      displayName: `${customer.firstName}${customer.lastName ? ` ${customer.lastName}` : ''}`,
       firstName: customer.firstName,
       lastName: customer.lastName,
       email: customer.email,

@@ -22,6 +22,8 @@ export class ProductsMapper {
       inventoryQuantity: product.inventoryQuantity,
       status: product.status,
       category: product.category,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
     };
   }
 
