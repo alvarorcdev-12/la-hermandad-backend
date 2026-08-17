@@ -1,15 +1,155 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
+import { Decimal } from '@prisma/client/runtime/client';
 import { PrismaService } from 'src/prisma.service';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { OrderItemDto } from './dto/order-item.dto';
 import { OrdersPaginationDto } from './dto/orders-pagination.dto';
+import { UpdateOrderDto } from './dto/update-order.dto';
+
+import type { Product, User } from 'src/generated/prisma/client';
 
 @Injectable()
 export class OrdersService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  create(createOrderDto: CreateOrderDto, storeId: string) {
-    return 'This action adds a new order';
+  async create(createOrderDto: CreateOrderDto, user: User) {
+    const { customerId, email, phone, note, items } = createOrderDto;
+
+    const storeId = user.storeId;
+
+    const productIds = items.map((item) => item.productId);
+
+    try {
+      const prismaTx = await this.prismaService.$transaction(async (tx) => {
+        // 1. Obtener prefijos para el orderName;
+        const storeSetting = await tx.storeSetting.findFirstOrThrow({
+          where: { storeId },
+        });
+
+        const { nextOrderNumber, orderPrefix, orderSuffix } = storeSetting;
+
+        const orderName = `${orderPrefix}${nextOrderNumber}${orderSuffix}`;
+
+        // 2. Obtener localidad por defecto
+        const location = await tx.location.findFirstOrThrow({
+          where: {
+            storeId,
+            isDefault: true,
+            isActive: true,
+          },
+        });
+
+        // 3. Obtener datos del cliente
+
+        const customer = await tx.customer.findFirst({
+          where: {
+            id: customerId,
+            storeId: storeId,
+          },
+        });
+
+        // 4. Obtener productos
+        const products = await tx.product.findMany({
+          where: {
+            id: {
+              in: productIds,
+            },
+            storeId: storeId,
+          },
+        });
+
+        // 5. armar items de la orden
+        const orderItems = this.buildOrderItems(items, products);
+
+        // 6. calcular subtotales
+        const { subtotalPrice, totalPirce, itemCount } =
+          this.calculatedOrder(orderItems);
+
+        // 7. Decrementar invetoryQuantity si product.trackInventory = true
+
+        const trackedProducts = orderItems.filter(
+          (item) => item.trackInventory,
+        );
+
+        if (trackedProducts.length > 0) {
+          const updateProductStockPromises = trackedProducts.map((item) => {
+            return tx.product.updateMany({
+              where: {
+                id: item.productId,
+                storeId: storeId,
+                inventoryQuantity: {
+                  gte: item.quantity,
+                },
+              },
+              data: {
+                inventoryQuantity: {
+                  decrement: item.quantity,
+                },
+              },
+            });
+          });
+
+          const updateProductStock = await Promise.all(
+            updateProductStockPromises,
+          );
+
+          updateProductStock.forEach((result, index) => {
+            if (result.count === 0) {
+              throw new BadRequestException(
+                `Insufficient stock for product "${trackedProducts[index].productTitle}".`,
+              );
+            }
+          });
+        }
+
+        //8. Crear la orden
+
+        const order = await tx.order.create({
+          data: {
+            userId: user.id,
+            storeId: storeId,
+            locationId: location.id,
+            customerId: customerId,
+            orderName: orderName,
+            orderNumber: nextOrderNumber,
+            itemCount: itemCount,
+            subtotalPrice: subtotalPrice,
+            totalPrice: totalPirce,
+            email: email ? email : customer?.email,
+            phone: phone ? phone : customer?.phone,
+            note: note,
+            orderItems: {
+              createMany: {
+                data: orderItems.map(({ trackInventory, ...rest }) => rest),
+              },
+            },
+          },
+          include: {
+            orderItems: true,
+            customer: true,
+            // user: true,
+          },
+        });
+        // 9. Incrementar el numero de orden
+        await tx.storeSetting.update({
+          where: { storeId: storeId },
+          data: { nextOrderNumber: { increment: 1 } },
+        });
+
+        return order;
+      });
+
+      // TODO: Mapper respuesta de order
+      return { ...prismaTx, orderNumber: Number(prismaTx.orderNumber) };
+    } catch (error) {
+      console.log({ error });
+      throw new InternalServerErrorException('Internal Server Error ');
+    }
   }
 
   async findAll(ordersPaginationDto: OrdersPaginationDto, storeId: string) {
@@ -80,5 +220,54 @@ export class OrdersService {
 
   remove(id: string, storeId: string) {
     return `This action removes a #${id} order`;
+  }
+
+  private buildOrderItems(items: OrderItemDto[], productsDB: Product[]) {
+    return items.map((item) => {
+      const product = productsDB.find((p) => p.id === item.productId);
+      if (!product) {
+        throw new BadRequestException(
+          `Product with id: ${item.productId} was not found.`,
+        );
+      }
+
+      const unitPrice = new Decimal(product.price);
+      const totalPrice = unitPrice.mul(item.quantity);
+
+      return {
+        productId: item.productId,
+        productTitle: product.title,
+        sku: product.sku,
+        quantity: item.quantity,
+        unitPrice: unitPrice,
+        totalPrice: totalPrice,
+        trackInventory: product.trackInventory,
+      };
+    });
+  }
+  private calculatedOrder(
+    orderItems: {
+      productId: string;
+      productTitle: string;
+      sku: string | null;
+      quantity: number;
+      unitPrice: Decimal;
+      totalPrice: Decimal;
+      trackInventory?: boolean;
+    }[],
+  ) {
+    let itemCount = 0;
+    let subtotalPrice = new Decimal(0);
+
+    for (const item of orderItems) {
+      itemCount += item.quantity;
+      subtotalPrice = subtotalPrice.plus(item.totalPrice);
+    }
+
+    return {
+      itemCount,
+      subtotalPrice,
+      totalPirce: subtotalPrice,
+    };
   }
 }

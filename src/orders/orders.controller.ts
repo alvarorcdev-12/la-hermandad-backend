@@ -12,9 +12,12 @@ import {
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { OrdersPaginationDto } from './dto/orders-pagination.dto';
+
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { Auth } from 'src/auth/decorators/auth.decorator';
-import { OrdersPaginationDto } from './dto/orders-pagination.dto';
+
+import type { User } from 'src/generated/prisma/client';
 
 @Controller('orders')
 export class OrdersController {
@@ -22,11 +25,8 @@ export class OrdersController {
 
   @Post()
   @Auth('OWNER', 'CASHIER', 'MANAGER')
-  create(
-    @Body() createOrderDto: CreateOrderDto,
-    @GetUser('storeId') storeId: string,
-  ) {
-    return this.ordersService.create(createOrderDto, storeId);
+  create(@Body() createOrderDto: CreateOrderDto, @GetUser() user: User) {
+    return this.ordersService.create(createOrderDto, user);
   }
 
   @Get()
