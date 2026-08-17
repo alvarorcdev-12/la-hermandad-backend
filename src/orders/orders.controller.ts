@@ -6,37 +6,90 @@ import {
   Patch,
   Param,
   Delete,
+  ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
+import { Auth } from 'src/auth/decorators/auth.decorator';
+import { OrdersPaginationDto } from './dto/orders-pagination.dto';
 
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
-  create(@Body() createOrderDto: CreateOrderDto) {
-    return this.ordersService.create(createOrderDto);
+  @Auth('OWNER', 'CASHIER', 'MANAGER')
+  create(
+    @Body() createOrderDto: CreateOrderDto,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.ordersService.create(createOrderDto, storeId);
   }
 
   @Get()
-  findAll() {
-    return this.ordersService.findAll();
+  @Auth('OWNER', 'CASHIER', 'MANAGER')
+  findAll(
+    @Query() orderPaginationDto: OrdersPaginationDto,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.ordersService.findAll(orderPaginationDto, storeId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.ordersService.findOne(+id);
+  @Auth('OWNER', 'CASHIER', 'MANAGER')
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.ordersService.findOne(id, storeId);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-    return this.ordersService.update(+id, updateOrderDto);
+  @Auth('OWNER', 'CASHIER', 'MANAGER')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('storeId') storeId: string,
+    @Body() updateOrderDto: UpdateOrderDto,
+  ) {
+    return this.ordersService.update(id, updateOrderDto, storeId);
+  }
+
+  @Post(':id/open')
+  @Auth('OWNER', 'CASHIER', 'MANAGER')
+  open(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.ordersService.orderOpen(id, storeId);
+  }
+
+  @Post(':id/close')
+  @Auth('OWNER', 'CASHIER', 'MANAGER')
+  close(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.ordersService.orderClose(id, storeId);
+  }
+
+  @Post(':id/cancel')
+  @Auth('OWNER', 'CASHIER', 'MANAGER')
+  cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.ordersService.orderCancel(id, storeId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.ordersService.remove(+id);
+  @Auth('OWNER', 'CASHIER', 'MANAGER')
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.ordersService.remove(id, storeId);
   }
 }
