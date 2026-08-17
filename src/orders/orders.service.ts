@@ -12,6 +12,7 @@ import { OrdersPaginationDto } from './dto/orders-pagination.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 
 import type { Product, User } from 'src/generated/prisma/client';
+import { OrdersMapper } from './mapper/orders.mapper';
 
 @Injectable()
 export class OrdersService {
@@ -144,8 +145,7 @@ export class OrdersService {
         return order;
       });
 
-      // TODO: Mapper respuesta de order
-      return { ...prismaTx, orderNumber: Number(prismaTx.orderNumber) };
+      return OrdersMapper.toOrderResponseDto(prismaTx);
     } catch (error) {
       console.log({ error });
       throw new InternalServerErrorException('Internal Server Error ');
@@ -179,7 +179,7 @@ export class OrdersService {
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1,
       },
-      results: orders,
+      results: OrdersMapper.toOrderResponseDtoList(orders),
     };
   }
 
@@ -199,7 +199,7 @@ export class OrdersService {
       throw new NotFoundException(`Order with id: ${id} not found`);
     }
 
-    return order;
+    return OrdersMapper.toOrderResponseDto(order);
   }
 
   update(id: string, updateOrderDto: UpdateOrderDto, storeId: string) {
