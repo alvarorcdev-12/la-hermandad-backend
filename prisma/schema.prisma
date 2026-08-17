@@ -28,9 +28,8 @@ enum ProductStatus {
 
 enum OrderStatus {
   OPEN
-  COMPLETED
+  CLOSED
   CANCELLED
-  REFUNDED
 }
 
 enum FinancialStatus {
@@ -188,7 +187,7 @@ model Product {
   costPrice      Decimal? @map("cost_price") @db.Decimal(12, 2)
   compareAtPrice Decimal? @map("compare_at_price") @db.Decimal(12, 2)
 
-  trackInventory    Boolean @default(false) @map("track_inventory")
+  trackInventory    Boolean @default(true) @map("track_inventory")
   inventoryQuantity Int     @default(0) @map("inventory_quantity")
 
   status ProductStatus @default(ACTIVE)
@@ -225,10 +224,10 @@ model Order {
   store      Store     @relation(fields: [storeId], references: [id])
   userId     String    @map("user_id") @db.Uuid
   user       User      @relation(fields: [userId], references: [id])
+  locationId String    @map("location_id") @db.Uuid
+  location   Location  @relation(fields: [locationId], references: [id])
   customerId String?   @map("customer_id") @db.Uuid
   customer   Customer? @relation(fields: [customerId], references: [id])
-  locationId String?   @map("location_id") @db.Uuid
-  location   Location? @relation(fields: [locationId], references: [id])
 
   orderNumber BigInt @map("order_number")
   orderName   String @map("order_name") @db.VarChar(100)
@@ -240,18 +239,18 @@ model Order {
 
   email String? @db.VarChar(150)
   phone String? @db.VarChar(50)
-  notes String? @db.Text
+  note  String? @db.Text
 
   financialStatus FinancialStatus @default(PENDING) @map("financial_status")
   status          OrderStatus     @default(OPEN)
 
-  cancelReason String?   @map("cancel_reason") @db.Text
-  cancelledAt  DateTime? @map("cancelled_at")
+  cancelReason String? @map("cancel_reason") @db.Text
 
-  paidAt DateTime? @map("paid_at")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  cancelledAt DateTime? @map("cancelled_at")
+  paidAt      DateTime? @map("paid_at")
+  closedAt    DateTime? @map("closed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   orderItems OrderItem[]
   payments   Payment[]
@@ -292,7 +291,7 @@ model Payment {
   method PaymentMethod
 
   reference String? @db.VarChar(150)
-  notes     String? @db.Text
+  note      String? @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
