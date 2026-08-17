@@ -202,11 +202,37 @@ export class OrdersService {
     return OrdersMapper.toOrderResponseDto(order);
   }
 
-  update(id: string, updateOrderDto: UpdateOrderDto, storeId: string) {
-    return `This action updates a #${id} order`;
+  async update(id: string, updateOrderDto: UpdateOrderDto, storeId: string) {
+    await this.findOne(id, storeId);
+
+    const { email, phone, note, customerId } = updateOrderDto;
+
+    try {
+      const updateOrder = await this.prismaService.order.update({
+        where: {
+          id: id,
+          storeId: storeId,
+        },
+        data: {
+          note: note,
+          email: email,
+          phone: phone,
+          customerId: customerId,
+        },
+        include: {
+          orderItems: true,
+          customer: true,
+        },
+      });
+
+      return OrdersMapper.toOrderResponseDto(updateOrder);
+    } catch (error) {
+      console.log({ error });
+      throw new InternalServerErrorException('Internal Server Error ');
+    }
   }
 
-  orderCancel(id: string, storeId: string) {
+  async orderCancel(id: string, storeId: string) {
     return `This action cancels an order`;
   }
 
