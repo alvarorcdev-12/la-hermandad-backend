@@ -10,9 +10,10 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderItemDto } from './dto/order-item.dto';
 import { OrdersPaginationDto } from './dto/orders-pagination.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { OrdersMapper } from './mapper/orders.mapper';
 
 import type { Product, User } from 'src/generated/prisma/client';
-import { OrdersMapper } from './mapper/orders.mapper';
+import { AddItemsDto } from './dto/add-items.dto';
 
 @Injectable()
 export class OrdersService {
@@ -230,6 +231,110 @@ export class OrdersService {
       console.log({ error });
       throw new InternalServerErrorException('Internal Server Error ');
     }
+  }
+
+  // Items
+  async addItems(id: string, storeId: string, addItemsDto: AddItemsDto) {
+    const order = await this.findOne(id, storeId);
+
+    if (order.status === 'CLOSED') {
+      throw new BadRequestException(
+        'The order must be open to add items or remove items.',
+      );
+    }
+
+    const { productIds } = addItemsDto;
+
+    const prismaTx = await this.prismaService.$transaction(async (tx) => {
+      // 1.Obtener products DB
+      const productsDB = await tx.product.findMany({
+        where: {
+          id: {
+            in: productIds,
+          },
+          storeId: storeId,
+        },
+      });
+
+      // 2. crear items
+      const items = productIds.map((productId) => ({
+        productId: productId,
+        quantity: 1,
+      }));
+
+      const orderItems = this.buildOrderItems(items, productsDB);
+
+      const updateOrderItems = await tx.order.update({
+        where: { id: id, storeId: storeId },
+        data: {
+          orderItems: {
+            createMany: {
+              data: orderItems.map(({ trackInventory, ...rest }) => rest),
+            },
+          },
+        },
+        include: {
+          orderItems: true,
+        },
+      });
+
+      // 3 actualizar stock de los productos
+      const trackedProducts = orderItems.filter((item) => item.trackInventory);
+
+      if (trackedProducts.length > 0) {
+        const updateProductStockPromises = trackedProducts.map((item) => {
+          return tx.product.updateMany({
+            where: {
+              id: item.productId,
+              storeId: storeId,
+              inventoryQuantity: {
+                gte: item.quantity,
+              },
+            },
+            data: {
+              inventoryQuantity: {
+                decrement: item.quantity,
+              },
+            },
+          });
+        });
+
+        const updateProductStock = await Promise.all(
+          updateProductStockPromises,
+        );
+
+        updateProductStock.forEach((result, index) => {
+          if (result.count === 0) {
+            throw new BadRequestException(
+              `Insufficient stock for product "${trackedProducts[index].productTitle}".`,
+            );
+          }
+        });
+      }
+
+      // 4. calcular total del pedido
+      const { itemCount, subtotalPrice, totalPirce } = this.calculatedOrder(
+        updateOrderItems.orderItems,
+      );
+
+      // 5. actualizar el pedido con los nuevos totales y items
+      const updateOrderWithItems = await tx.order.update({
+        where: { id: id, storeId: storeId },
+        data: {
+          itemCount: itemCount,
+          subtotalPrice: subtotalPrice,
+          totalPrice: totalPirce,
+        },
+        include: {
+          orderItems: true,
+          customer: true,
+        },
+      });
+
+      return updateOrderWithItems;
+    });
+
+    return OrdersMapper.toOrderResponseDto(prismaTx);
   }
 
   async orderCancel(id: string, storeId: string) {

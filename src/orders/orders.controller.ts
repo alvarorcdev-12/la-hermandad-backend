@@ -13,6 +13,7 @@ import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { OrdersPaginationDto } from './dto/orders-pagination.dto';
+import { AddItemsDto } from './dto/add-items.dto';
 
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { Auth } from 'src/auth/decorators/auth.decorator';
@@ -55,6 +56,17 @@ export class OrdersController {
     @Body() updateOrderDto: UpdateOrderDto,
   ) {
     return this.ordersService.update(id, updateOrderDto, storeId);
+  }
+
+  // Items
+  @Post(':id/items')
+  @Auth('OWNER', 'CASHIER', 'MANAGER')
+  addItems(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('storeId') storeId: string,
+    @Body() addItemsDto: AddItemsDto,
+  ) {
+    return this.ordersService.addItems(id, storeId, addItemsDto);
   }
 
   @Post(':id/open')
