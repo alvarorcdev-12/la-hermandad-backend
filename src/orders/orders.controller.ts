@@ -19,6 +19,7 @@ import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 
 import type { User } from 'src/generated/prisma/client';
+import { EditItemQuantityDto } from './dto/edit-item-quantity.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -67,6 +68,22 @@ export class OrdersController {
     @Body() addItemsDto: AddItemsDto,
   ) {
     return this.ordersService.addItems(id, storeId, addItemsDto);
+  }
+
+  @Patch(':id/items/:itemId')
+  @Auth('OWNER', 'CASHIER', 'MANAGER')
+  editItemQuantity(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+    @Body() editItemQuantityDto: EditItemQuantityDto,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.ordersService.editItemQuantity(
+      id,
+      itemId,
+      editItemQuantityDto,
+      storeId,
+    );
   }
 
   @Post(':id/open')

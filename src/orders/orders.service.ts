@@ -14,6 +14,7 @@ import { OrdersMapper } from './mapper/orders.mapper';
 
 import type { Product, User } from 'src/generated/prisma/client';
 import { AddItemsDto } from './dto/add-items.dto';
+import { EditItemQuantityDto } from './dto/edit-item-quantity.dto';
 
 @Injectable()
 export class OrdersService {
@@ -335,6 +336,134 @@ export class OrdersService {
     });
 
     return OrdersMapper.toOrderResponseDto(prismaTx);
+  }
+
+  async editItemQuantity(
+    id: string,
+    itemId: string,
+    editItemQuantityDto: EditItemQuantityDto,
+    storeId: string,
+  ) {
+    const currentOrder = await this.findOne(id, storeId);
+
+    if (currentOrder.status !== 'OPEN') {
+      throw new BadRequestException(
+        'The order must be open to add items or remove items.',
+      );
+    }
+
+    const { quantity: newQuantity, restock } = editItemQuantityDto;
+
+    if (newQuantity === 0) {
+      // remove item
+      // de la nueva order con el item retirado, crear otro methodo que se encargue de eso
+      return;
+    }
+
+    const prismaTx = await this.prismaService.$transaction(async (tx) => {
+      const currentItem = await tx.orderItem.findUniqueOrThrow({
+        where: {
+          id: itemId,
+          orderId: id,
+        },
+        include: {
+          product: true,
+        },
+      });
+
+      const currentQuantity = currentItem.quantity;
+
+      // if (newQuantity === currentQuantity) {
+      //   // Si las cantidades son iguales no se hace nada
+      //   return currentOrder;
+      // }
+
+      if (currentItem.product.trackInventory) {
+        const quantityDifference = Math.abs(newQuantity - currentQuantity);
+        if (restock) {
+          // devolver el stock al producto (sumar)
+          await tx.product.update({
+            where: {
+              id: currentItem.productId,
+              storeId: storeId,
+            },
+            data: {
+              inventoryQuantity: {
+                increment: quantityDifference,
+              },
+            },
+          });
+        } else {
+          // quitarle el stock al producto (restar)
+          const updateInventory = await tx.product.updateMany({
+            where: {
+              id: currentItem.productId,
+              storeId: storeId,
+              inventoryQuantity: {
+                gte: quantityDifference,
+              },
+            },
+            data: {
+              inventoryQuantity: {
+                decrement: quantityDifference,
+              },
+            },
+          });
+
+          if (updateInventory.count === 0) {
+            throw new BadRequestException(
+              `Insufficient stock for product "${currentItem.product.title}".`,
+            );
+          }
+        }
+      }
+
+      // Actualizar la cantidad del item
+      const newTotalPrice = currentItem.unitPrice.mul(newQuantity);
+      const updateOrderItem = await tx.orderItem.update({
+        where: {
+          id: itemId,
+          orderId: id,
+        },
+        data: {
+          quantity: newQuantity,
+          totalPrice: newTotalPrice,
+        },
+        include: {
+          order: {
+            include: {
+              orderItems: true,
+            },
+          },
+        },
+      });
+
+      // calcular el total del pedido
+      const { itemCount, subtotalPrice, totalPirce } = this.calculatedOrder(
+        updateOrderItem.order.orderItems,
+      );
+
+      // actualizar el pedido con el nuevo total
+      const updateOrderWithItems = await tx.order.update({
+        where: {
+          id: id,
+          storeId: storeId,
+        },
+        data: {
+          itemCount: itemCount,
+          subtotalPrice: subtotalPrice,
+          totalPrice: totalPirce,
+        },
+        include: {
+          customer: true,
+          orderItems: true,
+        },
+      });
+
+      return { ok: true, order: updateOrderWithItems };
+    });
+
+    return OrdersMapper.toOrderResponseDto(prismaTx.order);
   }
 
   async orderCancel(id: string, storeId: string) {
