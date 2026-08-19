@@ -16,6 +16,7 @@ import type { Product, User } from 'src/generated/prisma/client';
 import { AddItemsDto } from './dto/add-items.dto';
 import { EditItemQuantityDto } from './dto/edit-item-quantity.dto';
 import { TransactionClient } from 'src/generated/prisma/internal/prismaNamespace';
+import { CancelOrderDto } from './dto/cancel-order.dto';
 
 interface RemoveItemProps {
   orderId: string;
@@ -501,7 +502,70 @@ export class OrdersService {
     return OrdersMapper.toOrderResponseDto(openOrder);
   }
 
-  async orderCancel(id: string, storeId: string) {}
+  async orderCancel(
+    id: string,
+    storeId: string,
+    cancelOrderDto: CancelOrderDto,
+  ) {
+    const { reason } = cancelOrderDto;
+    const order = await this.findOne(id, storeId);
+
+    if (order.status === 'CANCELLED') {
+      return order;
+    }
+
+    if (order.status === 'CLOSED') {
+      throw new BadRequestException('Cannot cancel a closed order.');
+    }
+
+    return this.prismaService.$transaction(async (tx) => {
+      const orderItems = await tx.orderItem.findMany({
+        where: {
+          order: {
+            id: id,
+            storeId: storeId,
+          },
+        },
+        include: {
+          product: true,
+        },
+      });
+
+      for (const item of orderItems) {
+        if (item.product.trackInventory && item.quantity > 0) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: {
+              inventoryQuantity: { increment: item.quantity },
+            },
+          });
+        }
+      }
+
+      const cancelledOrder = await tx.order.update({
+        where: {
+          id: id,
+          storeId: storeId,
+        },
+        data: {
+          status: 'CANCELLED',
+          financialStatus: 'VOIDED',
+          cancelReason: reason,
+          cancelledAt: new Date(),
+        },
+        include: {
+          orderItems: {
+            where: {
+              quantity: { gt: 0 },
+            },
+          },
+          customer: true,
+        },
+      });
+
+      return OrdersMapper.toOrderResponseDto(cancelledOrder);
+    });
+  }
 
   async orderClose(id: string, storeId: string) {
     const order = await this.findOne(id, storeId);

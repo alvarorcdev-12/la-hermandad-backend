@@ -20,6 +20,7 @@ import { Auth } from 'src/auth/decorators/auth.decorator';
 
 import type { User } from 'src/generated/prisma/client';
 import { EditItemQuantityDto } from './dto/edit-item-quantity.dto';
+import { CancelOrderDto } from './dto/cancel-order.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -109,8 +110,9 @@ export class OrdersController {
   cancel(
     @Param('id', ParseUUIDPipe) id: string,
     @GetUser('storeId') storeId: string,
+    @Body() cancelOrderDto: CancelOrderDto,
   ) {
-    return this.ordersService.orderCancel(id, storeId);
+    return this.ordersService.orderCancel(id, storeId, cancelOrderDto);
   }
 
   @Delete(':id')
