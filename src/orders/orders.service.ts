@@ -464,16 +464,85 @@ export class OrdersService {
     });
   }
 
-  async orderCancel(id: string, storeId: string) {
-    return `This action cancels an order`;
+  async orderOpen(id: string, storeId: string) {
+    const order = await this.findOne(id, storeId);
+
+    if (order.status !== 'CLOSED') {
+      throw new BadRequestException(
+        'Only closed orders can be opened again. (un-close)',
+      );
+    }
+
+    if (order.finalcialStatus === 'VOIDED') {
+      throw new BadRequestException(
+        'Voided orders cannot be opened again. Please, create a new order instead.',
+      );
+    }
+
+    const openOrder = await this.prismaService.order.update({
+      where: {
+        id: id,
+        storeId: storeId,
+      },
+      data: {
+        status: 'OPEN',
+        closedAt: null,
+      },
+      include: {
+        orderItems: {
+          where: {
+            quantity: { gt: 0 },
+          },
+        },
+        customer: true,
+      },
+    });
+
+    return OrdersMapper.toOrderResponseDto(openOrder);
   }
 
-  orderClose(id: string, storeId: string) {
-    return `This action closes an order`;
-  }
+  async orderCancel(id: string, storeId: string) {}
 
-  orderOpen(id: string, storeId: string) {
-    return `This action opens an order`;
+  async orderClose(id: string, storeId: string) {
+    const order = await this.findOne(id, storeId);
+
+    if (order.status !== 'OPEN') {
+      throw new BadRequestException('Cannot close an order that is not open.');
+    }
+
+    const invalidFinancialStatuses = ['PENDING', 'PARTIALLY_PAID'];
+    if (invalidFinancialStatuses.includes(order.finalcialStatus)) {
+      throw new BadRequestException(
+        `Cannot close order. Financial status is ${order.finalcialStatus}. All transactions must be finalized (PAID, REFUNDED, etc.).`,
+      );
+    }
+    try {
+      const closeOrder = await this.prismaService.order.update({
+        where: {
+          id: id,
+          storeId: storeId,
+        },
+        data: {
+          status: 'CLOSED',
+          closedAt: new Date(),
+        },
+        include: {
+          orderItems: {
+            where: {
+              quantity: { gt: 0 },
+            },
+          },
+          customer: true,
+        },
+      });
+
+      return OrdersMapper.toOrderResponseDto(closeOrder);
+    } catch (error) {
+      console.log({ error });
+      throw new InternalServerErrorException(
+        'Unexpected error closing the order.',
+      );
+    }
   }
 
   remove(id: string, storeId: string) {
