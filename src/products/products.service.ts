@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable,
   InternalServerErrorException,
@@ -10,11 +9,12 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaService } from 'src/prisma.service';
 import { ProductsPaginationDto } from './dto/products-pagination.dto';
 
+import { ProductsMapper } from './mappers/products.mapper';
+
 import type {
   ProductOrderByWithRelationInput,
   ProductWhereInput,
 } from 'src/generated/prisma/models';
-import { ProductsMapper } from './mappers/products.mapper';
 
 @Injectable()
 export class ProductsService {

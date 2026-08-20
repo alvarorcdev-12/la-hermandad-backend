@@ -22,6 +22,10 @@ import { CancelOrderDto } from './dto/cancel-order.dto';
 import { OrdersMapper } from './mapper/orders.mapper';
 
 import type { Product, User } from 'src/generated/prisma/client';
+import {
+  OrderOrderByWithRelationInput,
+  OrderWhereInput,
+} from 'src/generated/prisma/models';
 
 @Injectable()
 export class OrdersService {
@@ -170,12 +174,72 @@ export class OrdersService {
   }
 
   async findAll(ordersPaginationDto: OrdersPaginationDto, storeId: string) {
-    const { page = 1, limit = 10 } = ordersPaginationDto;
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      sort,
+      direction,
+      q,
+    } = ordersPaginationDto;
+
+    const orderBy: OrderOrderByWithRelationInput = {
+      [sort ?? 'createdAt']: direction ?? 'desc',
+    };
+
+    const where: OrderWhereInput = {
+      storeId: storeId,
+      status: status,
+    };
+
+    if (q) {
+      where.OR = [
+        {
+          orderName: {
+            contains: q,
+            mode: 'insensitive',
+          },
+        },
+        {
+          customer: {
+            firstName: {
+              contains: q,
+              mode: 'insensitive',
+            },
+          },
+        },
+        {
+          customer: {
+            lastName: {
+              contains: q,
+              mode: 'insensitive',
+            },
+          },
+        },
+        {
+          customer: {
+            email: {
+              contains: q,
+              mode: 'insensitive',
+            },
+          },
+        },
+        {
+          customer: {
+            phone: {
+              contains: q,
+              mode: 'insensitive',
+            },
+          },
+        },
+      ];
+    }
 
     const [count, orders] = await Promise.all([
-      this.prismaService.order.count({ where: { storeId } }),
+      this.prismaService.order.count({ where }),
       this.prismaService.order.findMany({
-        where: { storeId },
+        where,
+        orderBy,
         skip: (page - 1) * limit,
         take: limit,
         include: {
