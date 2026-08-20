@@ -696,10 +696,6 @@ export class OrdersService {
     }
   }
 
-  remove(id: string, storeId: string) {
-    return `This action removes a #${id} order`;
-  }
-
   private buildOrderItems(items: OrderItemDto[], productsDB: Product[]) {
     return items.map((item) => {
       const product = productsDB.find((p) => p.id === item.productId);

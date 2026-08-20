@@ -5,7 +5,6 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   ParseUUIDPipe,
   Query,
 } from '@nestjs/common';
@@ -113,14 +112,5 @@ export class OrdersController {
     @Body() cancelOrderDto: CancelOrderDto,
   ) {
     return this.ordersService.orderCancel(id, storeId, cancelOrderDto);
-  }
-
-  @Delete(':id')
-  @Auth('OWNER', 'CASHIER', 'MANAGER')
-  remove(
-    @Param('id', ParseUUIDPipe) id: string,
-    @GetUser('storeId') storeId: string,
-  ) {
-    return this.ordersService.remove(id, storeId);
   }
 }
