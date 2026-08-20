@@ -6,6 +6,7 @@ import { ProductsModule } from './products/products.module';
 import { CategoriesModule } from './categories/categories.module';
 import { CustomersModule } from './customers/customers.module';
 import { OrdersModule } from './orders/orders.module';
+import { UsersModule } from './users/users.module';
 import configuration from './config/configuration';
 
 @Module({
@@ -20,6 +21,7 @@ import configuration from './config/configuration';
     CategoriesModule,
     CustomersModule,
     OrdersModule,
+    UsersModule,
   ],
   providers: [PrismaService],
   exports: [PrismaService],
