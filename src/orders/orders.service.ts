@@ -1,32 +1,32 @@
 import {
   BadRequestException,
+  ConflictException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Decimal } from '@prisma/client/runtime/client';
+import {
+  Decimal,
+  PrismaClientKnownRequestError,
+} from '@prisma/client/runtime/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderItemDto } from './dto/order-item.dto';
 import { OrdersPaginationDto } from './dto/orders-pagination.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { AddItemsDto } from './dto/add-items.dto';
+import { EditItemQuantityDto } from './dto/edit-item-quantity.dto';
+import { CancelOrderDto } from './dto/cancel-order.dto';
 import { OrdersMapper } from './mapper/orders.mapper';
 
 import type { Product, User } from 'src/generated/prisma/client';
-import { AddItemsDto } from './dto/add-items.dto';
-import { EditItemQuantityDto } from './dto/edit-item-quantity.dto';
-import { TransactionClient } from 'src/generated/prisma/internal/prismaNamespace';
-import { CancelOrderDto } from './dto/cancel-order.dto';
-
-interface RemoveItemProps {
-  orderId: string;
-  itemId: string;
-  storeId: string;
-  tx: TransactionClient;
-}
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(private readonly prismaService: PrismaService) {}
 
   async create(createOrderDto: CreateOrderDto, user: User) {
@@ -145,7 +145,11 @@ export class OrdersService {
             },
           },
           include: {
-            orderItems: true,
+            orderItems: {
+              where: {
+                quantity: { gt: 0 },
+              },
+            },
             customer: true,
             // user: true,
           },
@@ -161,8 +165,7 @@ export class OrdersService {
 
       return OrdersMapper.toOrderResponseDto(prismaTx);
     } catch (error) {
-      console.log({ error });
-      throw new InternalServerErrorException('Internal Server Error ');
+      this.handleDBExceptions(error);
     }
   }
 
@@ -176,7 +179,11 @@ export class OrdersService {
         skip: (page - 1) * limit,
         take: limit,
         include: {
-          orderItems: true,
+          orderItems: {
+            where: {
+              quantity: { gt: 0 },
+            },
+          },
           customer: true,
         },
       }),
@@ -204,7 +211,11 @@ export class OrdersService {
         storeId: storeId,
       },
       include: {
-        orderItems: true,
+        orderItems: {
+          where: {
+            quantity: { gt: 0 },
+          },
+        },
         customer: true,
       },
     });
@@ -234,15 +245,18 @@ export class OrdersService {
           customerId: customerId,
         },
         include: {
-          orderItems: true,
+          orderItems: {
+            where: {
+              quantity: { gt: 0 },
+            },
+          },
           customer: true,
         },
       });
 
       return OrdersMapper.toOrderResponseDto(updateOrder);
     } catch (error) {
-      console.log({ error });
-      throw new InternalServerErrorException('Internal Server Error ');
+      this.handleDBExceptions(error);
     }
   }
 
@@ -285,7 +299,11 @@ export class OrdersService {
           },
         },
         include: {
-          orderItems: true,
+          orderItems: {
+            where: {
+              quantity: { gt: 0 },
+            },
+          },
         },
       });
 
@@ -339,7 +357,11 @@ export class OrdersService {
           totalPrice: totalPirce,
         },
         include: {
-          orderItems: true,
+          orderItems: {
+            where: {
+              quantity: { gt: 0 },
+            },
+          },
           customer: true,
         },
       });
@@ -433,7 +455,11 @@ export class OrdersService {
           storeId: storeId,
         },
         include: {
-          orderItems: true,
+          orderItems: {
+            where: {
+              quantity: { gt: 0 },
+            },
+          },
         },
       });
 
@@ -602,10 +628,7 @@ export class OrdersService {
 
       return OrdersMapper.toOrderResponseDto(closeOrder);
     } catch (error) {
-      console.log({ error });
-      throw new InternalServerErrorException(
-        'Unexpected error closing the order.',
-      );
+      this.handleDBExceptions(error);
     }
   }
 
@@ -662,38 +685,42 @@ export class OrdersService {
     };
   }
 
-  private async removeItem(props: RemoveItemProps) {
-    const { orderId, itemId, storeId, tx } = props;
-
-    const item = await tx.orderItem.findUniqueOrThrow({
-      where: {
-        id: itemId,
-        orderId: orderId,
-      },
-      include: {
-        product: true,
-      },
-    });
-
-    if (item.product.trackInventory) {
-      await tx.product.update({
-        where: {
-          id: item.productId,
-          storeId: storeId,
-        },
-        data: {
-          inventoryQuantity: {
-            increment: item.quantity,
-          },
-        },
-      });
+  private handleDBExceptions(error: any): never {
+    if (error instanceof HttpException) {
+      throw error;
     }
 
-    await tx.orderItem.delete({
-      where: {
-        id: itemId,
-        orderId: orderId,
-      },
-    });
+    if (error instanceof PrismaClientKnownRequestError) {
+      switch (error.code) {
+        case 'P2002': {
+          const target = error.meta?.target as string[] | undefined;
+          const fields = target ? target.join(', ') : 'unknown field';
+
+          throw new ConflictException(
+            `Duplicate value: The field(s) [${fields}] must be unique.`,
+          );
+        }
+
+        case 'P2025': {
+          const cause = error.meta?.cause as string | undefined;
+          throw new NotFoundException(
+            cause || 'A required record was not found.',
+          );
+        }
+
+        case 'P2003': {
+          const field = error.meta?.field_name as string | undefined;
+          throw new BadRequestException(
+            `Cannot perform operation: The referenced ${field || 'field'} does not exist.`,
+          );
+        }
+      }
+    }
+
+    this.logger.error('Unexpected error in OrdersService', error.stack);
+
+    throw new InternalServerErrorException(
+      'Internal server error. Please try again later.',
+    );
   }
 }
