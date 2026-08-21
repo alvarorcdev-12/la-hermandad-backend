@@ -48,8 +48,13 @@ export class UsersController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
+  @Auth('OWNER', 'MANAGER')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.usersService.update(id, updateUserDto, storeId);
   }
 
   @Delete(':id')

@@ -128,8 +128,29 @@ export class UsersService {
     return UsersMapper.toUserResponseDto(user);
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async update(id: string, updateUserDto: UpdateUserDto, storeId: string) {
+    await this.findOne(id, storeId);
+
+    try {
+      const updateUser = await this.prismaService.user.update({
+        where: {
+          id: id,
+          storeId: storeId,
+        },
+        data: {
+          firstName: updateUserDto.firstName,
+          lastName: updateUserDto.lastName,
+          email: updateUserDto.email,
+          phone: updateUserDto.phone,
+          role: updateUserDto.role,
+        },
+      });
+
+      return UsersMapper.toUserResponseDto(updateUser);
+    } catch (error) {
+      //TODO: handleExeception
+      console.log({ error });
+    }
   }
 
   remove(id: number) {
