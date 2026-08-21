@@ -1,11 +1,41 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { PrismaService } from 'src/prisma.service';
+
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
+  constructor(private readonly prismaService: PrismaService) {}
+
+  async create(createUserDto: CreateUserDto, storeId: string) {
+    const { firstName, lastName, email, phone, password, role } = createUserDto;
+
+    const existUser = await this.prismaService.user.findFirst({
+      where: {
+        email: email,
+        storeId: storeId,
+      },
+    });
+
+    if (existUser) {
+      throw new BadRequestException('User already exists with email: ' + email);
+    }
+
+    const user = await this.prismaService.user.create({
+      data: {
+        storeId: storeId,
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        phone: phone,
+        password: password,
+        role: role,
+        isShopOwner: false,
+      },
+    });
+
+    return user;
   }
 
   findAll() {
