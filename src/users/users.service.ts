@@ -1,8 +1,15 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'src/prisma.service';
 
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+
+import type {
+  UserOrderByWithRelationInput,
+  UserWhereInput,
+} from 'src/generated/prisma/models';
 
 @Injectable()
 export class UsersService {
@@ -29,7 +36,7 @@ export class UsersService {
         lastName: lastName,
         email: email,
         phone: phone,
-        password: password,
+        password: password ? bcrypt.hashSync(password, 10) : null,
         role: role,
         isShopOwner: false,
       },
@@ -38,12 +45,86 @@ export class UsersService {
     return user;
   }
 
-  findAll() {
-    return `This action returns all users`;
+  async findAll(paginationDto: PaginationDto, storeId: string) {
+    const { page = 1, limit = 10, q, sort, direction } = paginationDto;
+
+    const orderBy: UserOrderByWithRelationInput = {
+      [sort ?? 'createdAt']: direction ?? 'desc',
+    };
+
+    const where: UserWhereInput = {
+      storeId: storeId,
+    };
+
+    if (q) {
+      where.OR = [
+        {
+          firstName: {
+            contains: q,
+            mode: 'insensitive',
+          },
+        },
+        {
+          lastName: {
+            contains: q,
+            mode: 'insensitive',
+          },
+        },
+        {
+          email: {
+            contains: q,
+            mode: 'insensitive',
+          },
+        },
+        {
+          phone: {
+            contains: q,
+            mode: 'insensitive',
+          },
+        },
+      ];
+    }
+
+    const [count, users] = await Promise.all([
+      this.prismaService.user.count({
+        where,
+      }),
+      this.prismaService.user.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
+
+    const totalPages = Math.ceil(count / limit);
+
+    return {
+      meta: {
+        totalItems: count,
+        currentPage: page,
+        pageSize: limit,
+        totalPages: totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+      results: users,
+    };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async findOne(id: string, storeId: string) {
+    const user = await this.prismaService.user.findFirst({
+      where: {
+        id: id,
+        storeId: storeId,
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    return user;
   }
 
   update(id: number, updateUserDto: UpdateUserDto) {
