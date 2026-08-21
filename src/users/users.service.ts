@@ -10,6 +10,7 @@ import type {
   UserOrderByWithRelationInput,
   UserWhereInput,
 } from 'src/generated/prisma/models';
+import { UsersMapper } from './mapper/users.mapper';
 
 @Injectable()
 export class UsersService {
@@ -108,7 +109,7 @@ export class UsersService {
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1,
       },
-      results: users,
+      results: UsersMapper.toUserResponseDtoList(users),
     };
   }
 
@@ -124,7 +125,7 @@ export class UsersService {
       throw new BadRequestException('User not found');
     }
 
-    return user;
+    return UsersMapper.toUserResponseDto(user);
   }
 
   update(id: number, updateUserDto: UpdateUserDto) {
