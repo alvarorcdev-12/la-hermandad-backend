@@ -163,8 +163,21 @@ export class UsersService {
     }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async remove(id: string, storeId: string) {
+    await this.findOne(id, storeId);
+
+    try {
+      const deleteUser = await this.prismaService.user.delete({
+        where: {
+          id: id,
+          storeId: storeId,
+        },
+      });
+
+      return UsersMapper.toUserResponseDto(deleteUser);
+    } catch (error) {
+      this.handleDBExceptions(error);
+    }
   }
 
   private handleDBExceptions(error: any): never {

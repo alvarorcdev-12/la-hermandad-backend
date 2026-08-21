@@ -2,8 +2,8 @@ import {
   Controller,
   Get,
   Post,
-  Body,
   Patch,
+  Body,
   Param,
   Delete,
   Query,
@@ -58,7 +58,11 @@ export class UsersController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  @Auth('OWNER')
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.usersService.remove(id, storeId);
   }
 }
