@@ -12,9 +12,9 @@ import {
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Controller('users')
 export class UsersController {
@@ -55,6 +55,15 @@ export class UsersController {
     @GetUser('storeId') storeId: string,
   ) {
     return this.usersService.update(id, updateUserDto, storeId);
+  }
+
+  @Patch(':id/status')
+  @Auth('OWNER')
+  changeActiveStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.usersService.changeActiveStatus(id, storeId);
   }
 
   @Delete(':id')

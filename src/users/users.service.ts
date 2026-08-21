@@ -14,12 +14,13 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 
+import { UsersMapper } from './mapper/users.mapper';
+
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 import type {
   UserOrderByWithRelationInput,
   UserWhereInput,
 } from 'src/generated/prisma/models';
-import { UsersMapper } from './mapper/users.mapper';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 
 @Injectable()
 export class UsersService {
@@ -54,7 +55,7 @@ export class UsersService {
       },
     });
 
-    return user;
+    return UsersMapper.toUserResponseDto(user);
   }
 
   async findAll(paginationDto: PaginationDto, storeId: string) {
@@ -154,6 +155,26 @@ export class UsersService {
           email: updateUserDto.email,
           phone: updateUserDto.phone,
           role: updateUserDto.role,
+        },
+      });
+
+      return UsersMapper.toUserResponseDto(updateUser);
+    } catch (error) {
+      this.handleDBExceptions(error);
+    }
+  }
+
+  async changeActiveStatus(id: string, storeId: string) {
+    const user = await this.findOne(id, storeId);
+
+    try {
+      const updateUser = await this.prismaService.user.update({
+        where: {
+          id: id,
+          storeId: storeId,
+        },
+        data: {
+          isActive: !user.isActive,
         },
       });
 

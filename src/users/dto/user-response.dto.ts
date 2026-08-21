@@ -1,6 +1,8 @@
 import { Role } from 'src/generated/prisma/enums';
 
 export class UserResponseDto {
+  id: string;
+
   firstName: string;
 
   lastName: string | null;
@@ -12,10 +14,13 @@ export class UserResponseDto {
   email: string;
 
   role: Role;
+  phone: string | null;
 
   isShopOwner: boolean;
 
-  phone: string | null;
+  isActive: boolean;
+
+  createdAt: Date;
 
   avatar: string | null;
 }
