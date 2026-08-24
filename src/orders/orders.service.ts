@@ -19,13 +19,21 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 import { AddItemsDto } from './dto/add-items.dto';
 import { EditItemQuantityDto } from './dto/edit-item-quantity.dto';
 import { CancelOrderDto } from './dto/cancel-order.dto';
+import { CreatePaymentDto } from './dto/create-payment.dto';
+
 import { OrdersMapper } from './mapper/orders.mapper';
 
-import type { Product, User } from 'src/generated/prisma/client';
-import {
+import type {
+  FinancialStatus,
+  Order,
+  Product,
+  User,
+} from 'src/generated/prisma/client';
+import type {
   OrderOrderByWithRelationInput,
   OrderWhereInput,
 } from 'src/generated/prisma/models';
+import type { TransactionClient } from 'src/generated/prisma/internal/prismaNamespace';
 
 @Injectable()
 export class OrdersService {
@@ -696,6 +704,57 @@ export class OrdersService {
     }
   }
 
+  // Payments
+  addPayment(id: string, storeId: string, createPaymentDto: CreatePaymentDto) {
+    return this.prismaService.$transaction(async (tx) => {
+      // 1. Obtener order
+      const order = await tx.order.findFirstOrThrow({
+        where: {
+          id: id,
+          storeId: storeId,
+        },
+      });
+
+      if (order.financialStatus === 'PAID') {
+        throw new BadRequestException(
+          'Cannot add payments to an order that is already fully paid.',
+        );
+      }
+
+      if (order.status === 'CANCELLED' || order.status === 'CLOSED') {
+        throw new BadRequestException(
+          `Cannot add payments to an order with status ${order.status}.`,
+        );
+      }
+
+      const payment = await tx.payment.create({
+        data: {
+          orderId: id,
+          amount: new Decimal(createPaymentDto.amount),
+          method: createPaymentDto.method,
+          reference: createPaymentDto.reference,
+          note: createPaymentDto.note,
+        },
+      });
+
+      const { financialStatus, paidAt } = await this.recalculateFinancialStatus(
+        tx,
+        order,
+      );
+
+      // 5. Actualizar la orden
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          financialStatus,
+          paidAt, // Se setea solo si está totalmente pagada
+        },
+      });
+
+      return payment;
+    });
+  }
+
   private buildOrderItems(items: OrderItemDto[], productsDB: Product[]) {
     return items.map((item) => {
       const product = productsDB.find((p) => p.id === item.productId);
@@ -743,6 +802,38 @@ export class OrdersService {
       subtotalPrice,
       totalPrice: subtotalPrice,
     };
+  }
+  private async recalculateFinancialStatus(
+    tx: TransactionClient,
+    order: Order,
+  ) {
+    // Obtener TODOS los pagos de la orden
+    const payments = await tx.payment.findMany({
+      where: { orderId: order.id },
+    });
+
+    // Sumar los pagos usando Decimal de Prisma
+    const totalPaid = payments.reduce(
+      (sum, payment) => sum.plus(payment.amount),
+      new Decimal(0),
+    );
+
+    let financialStatus: FinancialStatus = 'PENDING';
+    let paidAt: Date | null = order.paidAt; // Mantener el histórico si ya estaba pagada
+
+    // Comparar lo pagado vs el total de la orden
+    if (totalPaid.greaterThanOrEqualTo(order.totalPrice)) {
+      // Se pasó del total o es exacto
+      financialStatus = 'PAID';
+      if (!order.paidAt) {
+        paidAt = new Date(); // Seteamos el timestamp solo la primera vez
+      }
+    } else if (totalPaid.greaterThan(0)) {
+      // Pagó algo, pero le falta
+      financialStatus = 'PARTIALLY_PAID';
+    }
+
+    return { financialStatus, paidAt };
   }
 
   private handleDBExceptions(error: any): never {

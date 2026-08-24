@@ -15,6 +15,7 @@ import { OrdersPaginationDto } from './dto/orders-pagination.dto';
 import { AddItemsDto } from './dto/add-items.dto';
 import { EditItemQuantityDto } from './dto/edit-item-quantity.dto';
 import { CancelOrderDto } from './dto/cancel-order.dto';
+import { CreatePaymentDto } from './dto/create-payment.dto';
 
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { Auth } from 'src/auth/decorators/auth.decorator';
@@ -112,5 +113,15 @@ export class OrdersController {
     @Body() cancelOrderDto: CancelOrderDto,
   ) {
     return this.ordersService.orderCancel(id, storeId, cancelOrderDto);
+  }
+
+  @Post(':id/payment')
+  @Auth('OWNER', 'CASHIER', 'MANAGER')
+  addPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('storeId') storeId: string,
+    @Body() createPaymentDto: CreatePaymentDto,
+  ) {
+    return this.ordersService.addPayment(id, storeId, createPaymentDto);
   }
 }
