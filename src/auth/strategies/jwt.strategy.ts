@@ -8,6 +8,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma.service';
 import type { JwtPayload } from '../interfaces/jwt-payload.interface';
+import { UsersMapper } from 'src/users/mapper/users.mapper';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -31,6 +32,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload) {
     const user = await this.prismaService.user.findUnique({
       where: { id: payload.id },
+      include: {
+        store: true,
+      },
     });
 
     if (!user) {
@@ -43,8 +47,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       );
     }
 
-    const { password, createdAt, updatedAt, ...rest } = user;
-
-    return rest;
+    return UsersMapper.toUserResponseDto(user);
   }
 }

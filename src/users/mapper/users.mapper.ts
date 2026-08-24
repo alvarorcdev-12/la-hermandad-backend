@@ -1,10 +1,14 @@
-import { User } from 'src/generated/prisma/client';
 import { UserResponseDto } from '../dto/user-response.dto';
 
+import type { UserGetPayload } from 'src/generated/prisma/models';
+
+type UserDB = UserGetPayload<{ include: { store: true } }>;
+
 export class UsersMapper {
-  static toUserResponseDto(user: User): UserResponseDto {
+  static toUserResponseDto(user: UserDB): UserResponseDto {
     return {
       id: user.id,
+      storeName: user.store.name,
       firstName: user.firstName,
       lastName: user.lastName,
       name: `${user.firstName} ${user.lastName ?? ''}`,
@@ -19,7 +23,7 @@ export class UsersMapper {
     };
   }
 
-  static toUserResponseDtoList(users: User[]): UserResponseDto[] {
+  static toUserResponseDtoList(users: UserDB[]): UserResponseDto[] {
     return users.map((user) => this.toUserResponseDto(user));
   }
 }

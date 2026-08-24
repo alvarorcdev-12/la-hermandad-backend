@@ -56,6 +56,9 @@ export class UsersService {
         role: role,
         isShopOwner: false,
       },
+      include: {
+        store: true,
+      },
     });
 
     return UsersMapper.toUserResponseDto(user);
@@ -110,6 +113,9 @@ export class UsersService {
         orderBy,
         skip: (page - 1) * limit,
         take: limit,
+        include: {
+          store: true,
+        },
       }),
     ]);
 
@@ -133,6 +139,9 @@ export class UsersService {
       where: {
         id: id,
         storeId: storeId,
+      },
+      include: {
+        store: true,
       },
     });
 
@@ -159,6 +168,9 @@ export class UsersService {
           phone: updateUserDto.phone,
           role: updateUserDto.role,
         },
+        include: {
+          store: true,
+        },
       });
 
       return UsersMapper.toUserResponseDto(updateUser);
@@ -179,6 +191,9 @@ export class UsersService {
         data: {
           isActive: !user.isActive,
         },
+        include: {
+          store: true,
+        },
       });
 
       return UsersMapper.toUserResponseDto(updateUser);
@@ -196,6 +211,9 @@ export class UsersService {
           id: id,
           storeId: storeId,
         },
+        include: {
+          store: true,
+        },
       });
 
       return UsersMapper.toUserResponseDto(deleteUser);
@@ -204,8 +222,8 @@ export class UsersService {
     }
   }
 
-  getMyDataUser(user: User) {
-    return UsersMapper.toUserResponseDto(user);
+  async getMyDataUser(user: User) {
+    return await this.findOne(user.id, user.storeId);
   }
 
   async changePassword(changePasswordDto: ChangePasswordDto, user: User) {
@@ -213,6 +231,9 @@ export class UsersService {
       where: {
         id: user.id,
         storeId: user.storeId,
+      },
+      include: {
+        store: true,
       },
     });
 
@@ -241,6 +262,9 @@ export class UsersService {
         },
         data: {
           password: hashPassword,
+        },
+        include: {
+          store: true,
         },
       });
 

@@ -6,6 +6,7 @@ import { PrismaService } from 'src/prisma.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { User } from 'src/generated/prisma/client';
+import { UsersMapper } from 'src/users/mapper/users.mapper';
 import type { JwtPayload } from './interfaces/jwt-payload.interface';
 
 @Injectable()
@@ -20,6 +21,9 @@ export class AuthService {
 
     const user = await this.prismaService.user.findUnique({
       where: { email: email },
+      include: {
+        store: true,
+      },
     });
 
     if (!user) {
@@ -38,7 +42,10 @@ export class AuthService {
 
     const { password: _, createdAt, updatedAt, ...rest } = user;
 
-    return { token: this.getJWTToken({ id: user.id }), user: rest };
+    return {
+      token: this.getJWTToken({ id: user.id }),
+      user: UsersMapper.toUserResponseDto(user),
+    };
   }
 
   async register(registerUserDto: RegisterUserDto) {
@@ -46,6 +53,9 @@ export class AuthService {
       // 1. Verificar si existe email
       const emailExist = await tx.user.findUnique({
         where: { email: registerUserDto.email },
+        include: {
+          store: true,
+        },
       });
 
       if (emailExist) {
@@ -87,14 +97,18 @@ export class AuthService {
           role: 'OWNER',
           isShopOwner: true,
         },
+        include: {
+          store: true,
+        },
       });
 
       return user;
     });
 
-    const { password: _, createdAt, updatedAt, ...rest } = prismaTx;
-
-    return { token: this.getJWTToken({ id: prismaTx.id }), user: rest };
+    return {
+      token: this.getJWTToken({ id: prismaTx.id }),
+      user: UsersMapper.toUserResponseDto(prismaTx),
+    };
   }
 
   checkAuthStatus(user: User) {
