@@ -5,7 +5,7 @@ import { LoginUserDto } from './dto/login-user.dto';
 import { GetUser } from './decorators/get-user.decorator';
 import { Auth } from './decorators/auth.decorator';
 
-import type { User } from 'src/generated/prisma/client';
+import type { UserGetPayload } from 'src/generated/prisma/models';
 
 @Controller('auth')
 export class AuthController {
@@ -23,7 +23,9 @@ export class AuthController {
 
   @Get('check-status')
   @Auth()
-  checkAuthStatus(@GetUser() user: User) {
+  checkAuthStatus(
+    @GetUser() user: UserGetPayload<{ include: { store: true } }>,
+  ) {
     return this.authService.checkAuthStatus(user);
   }
 }

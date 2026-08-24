@@ -5,9 +5,11 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'src/prisma.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
-import { User } from 'src/generated/prisma/client';
+
 import { UsersMapper } from 'src/users/mapper/users.mapper';
+
 import type { JwtPayload } from './interfaces/jwt-payload.interface';
+import type { UserGetPayload } from 'src/generated/prisma/models';
 
 @Injectable()
 export class AuthService {
@@ -39,8 +41,6 @@ export class AuthService {
     if (!user.isActive) {
       throw new BadRequestException('User is not active');
     }
-
-    const { password: _, createdAt, updatedAt, ...rest } = user;
 
     return {
       token: this.getJWTToken({ id: user.id }),
@@ -111,10 +111,10 @@ export class AuthService {
     };
   }
 
-  checkAuthStatus(user: User) {
+  checkAuthStatus(user: UserGetPayload<{ include: { store: true } }>) {
     return {
       token: this.getJWTToken({ id: user.id }),
-      user,
+      user: UsersMapper.toUserResponseDto(user),
     };
   }
 

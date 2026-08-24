@@ -7,8 +7,9 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma.service';
+
 import type { JwtPayload } from '../interfaces/jwt-payload.interface';
-import { UsersMapper } from 'src/users/mapper/users.mapper';
+// import { UsersMapper } from 'src/users/mapper/users.mapper';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -47,6 +48,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       );
     }
 
-    return UsersMapper.toUserResponseDto(user);
+    return user;
   }
 }
