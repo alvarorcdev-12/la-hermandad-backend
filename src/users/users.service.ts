@@ -13,16 +13,17 @@ import { PrismaService } from 'src/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 import { UsersMapper } from './mapper/users.mapper';
 
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
-import { User } from 'src/generated/prisma/client';
 
 import type {
   UserOrderByWithRelationInput,
   UserWhereInput,
 } from 'src/generated/prisma/models';
+import type { User } from 'src/generated/prisma/client';
 
 @Injectable()
 export class UsersService {
@@ -204,9 +205,49 @@ export class UsersService {
   }
 
   getMyDataUser(user: User) {
-    console.log({ user });
-
     return UsersMapper.toUserResponseDto(user);
+  }
+
+  async changePassword(changePasswordDto: ChangePasswordDto, user: User) {
+    const currentUser = await this.prismaService.user.findFirstOrThrow({
+      where: {
+        id: user.id,
+        storeId: user.storeId,
+      },
+    });
+
+    const isMatchPassword = bcrypt.compareSync(
+      changePasswordDto.currentPassword,
+      currentUser.password!,
+    );
+
+    if (!isMatchPassword) {
+      throw new BadRequestException('Invalid current password');
+    }
+
+    if (changePasswordDto.newPassword === changePasswordDto.currentPassword) {
+      throw new BadRequestException(
+        'New password must be different from current password',
+      );
+    }
+
+    const hashPassword = bcrypt.hashSync(changePasswordDto.newPassword, 10);
+
+    try {
+      const updateUser = await this.prismaService.user.update({
+        where: {
+          id: user.id,
+          storeId: user.storeId,
+        },
+        data: {
+          password: hashPassword,
+        },
+      });
+
+      return UsersMapper.toUserResponseDto(updateUser);
+    } catch (error) {
+      this.handleDBExceptions(error);
+    }
   }
 
   private handleDBExceptions(error: any): never {

@@ -16,6 +16,7 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import type { User } from 'src/generated/prisma/client';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Controller('users')
 export class UsersController {
@@ -33,6 +34,15 @@ export class UsersController {
   @Auth()
   updateMyData(@Body() updateUserDto: UpdateUserDto, @GetUser() user: User) {
     return this.usersService.update(user.id, updateUserDto, user.storeId);
+  }
+
+  @Patch('me/password')
+  @Auth()
+  changePassword(
+    @Body() changePasswordDto: ChangePasswordDto,
+    @GetUser() user: User,
+  ) {
+    return this.usersService.changePassword(changePasswordDto, user);
   }
 
   @Post()
