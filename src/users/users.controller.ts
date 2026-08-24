@@ -15,10 +15,25 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
+import type { User } from 'src/generated/prisma/client';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  // Me profile
+
+  @Get('me')
+  @Auth()
+  getMyDataUser(@GetUser() user: User) {
+    return this.usersService.getMyDataUser(user);
+  }
+
+  @Patch('me')
+  @Auth()
+  updateMyData(@Body() updateUserDto: UpdateUserDto, @GetUser() user: User) {
+    return this.usersService.update(user.id, updateUserDto, user.storeId);
+  }
 
   @Post()
   @Auth('OWNER', 'MANAGER')
@@ -74,4 +89,13 @@ export class UsersController {
   ) {
     return this.usersService.remove(id, storeId);
   }
+
+  // @Patch('me/password')
+  // @Auth()
+  // changePassword(
+  //   @Body() changePasswordDto: ChangePasswordDto,
+  //   @GetUser() user: User,
+  // ) {
+  //   return this.usersService.changePassword(changePasswordDto, user);
+  // }
 }

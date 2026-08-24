@@ -17,6 +17,8 @@ import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { UsersMapper } from './mapper/users.mapper';
 
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
+import { User } from 'src/generated/prisma/client';
+
 import type {
   UserOrderByWithRelationInput,
   UserWhereInput,
@@ -199,6 +201,12 @@ export class UsersService {
     } catch (error) {
       this.handleDBExceptions(error);
     }
+  }
+
+  getMyDataUser(user: User) {
+    console.log({ user });
+
+    return UsersMapper.toUserResponseDto(user);
   }
 
   private handleDBExceptions(error: any): never {
