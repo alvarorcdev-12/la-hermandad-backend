@@ -21,6 +21,7 @@ import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 
 import type { User } from 'src/generated/prisma/client';
+import { OrderStatsDto } from './dto/order-stats.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -39,6 +40,15 @@ export class OrdersController {
     @GetUser('storeId') storeId: string,
   ) {
     return this.ordersService.findAll(orderPaginationDto, storeId);
+  }
+
+  @Get('stats')
+  @Auth('OWNER', 'CASHIER', 'MANAGER')
+  getOrderStats(
+    @Query() orderStatsDto: OrderStatsDto,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.ordersService.getOrderStats(storeId, orderStatsDto);
   }
 
   @Get(':id')

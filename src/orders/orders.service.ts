@@ -30,10 +30,12 @@ import type {
   User,
 } from 'src/generated/prisma/client';
 import type {
+  DateTimeFilter,
   OrderOrderByWithRelationInput,
   OrderWhereInput,
 } from 'src/generated/prisma/models';
 import type { TransactionClient } from 'src/generated/prisma/internal/prismaNamespace';
+import { OrderStatsDto } from './dto/order-stats.dto';
 
 @Injectable()
 export class OrdersService {
@@ -93,7 +95,7 @@ export class OrdersService {
         // 6. calcular subtotales
         const {
           subtotalPrice,
-          totalPrice: totalPirce,
+          totalPrice: totalPrice,
           itemCount,
         } = this.calculatedOrder(orderItems);
 
@@ -146,7 +148,7 @@ export class OrdersService {
             orderNumber: nextOrderNumber,
             itemCount: itemCount,
             subtotalPrice: subtotalPrice,
-            totalPrice: totalPirce,
+            totalPrice: totalPrice,
             email: email ? email : customer?.email,
             phone: phone ? phone : customer?.phone,
             note: note,
@@ -273,6 +275,60 @@ export class OrdersService {
         hasPreviousPage: page > 1,
       },
       results: OrdersMapper.toOrderResponseDtoList(orders),
+    };
+  }
+
+  async getOrderStats(storeId: string, orderStatsDto: OrderStatsDto) {
+    const { startDate, endDate } = orderStatsDto;
+
+    const dateFilter = this.buildDateFilter(startDate, endDate);
+
+    const where: OrderWhereInput = {
+      storeId: storeId,
+      ...dateFilter,
+      status: { not: 'CANCELLED' },
+    };
+
+    const [total, sumTotalPrice, sumItemCount, closedOrders, cancelledOrders] =
+      await Promise.all([
+        // Total pedidos
+        this.prismaService.order.aggregate({
+          where: where,
+          _count: { id: true },
+        }),
+        // Suma de totalPrice
+        this.prismaService.order.aggregate({
+          where: where,
+          _sum: { totalPrice: true },
+        }),
+
+        // Suma itemCount
+        this.prismaService.order.aggregate({
+          where: where,
+          _sum: { itemCount: true },
+        }),
+        // Orders cerrados
+        this.prismaService.order.aggregate({
+          where: { ...where, status: 'CLOSED' },
+          _count: { id: true },
+        }),
+        // Orders cancelados
+        this.prismaService.order.aggregate({
+          where: {
+            storeId,
+            ...dateFilter,
+            status: 'CANCELLED',
+          },
+          _count: { id: true },
+        }),
+      ]);
+
+    return {
+      orders: total._count.id,
+      sales: sumTotalPrice._sum.totalPrice || new Decimal(0),
+      items: sumItemCount._sum.itemCount || 0,
+      closedOrders: closedOrders._count.id,
+      cancelledOrders: cancelledOrders._count.id,
     };
   }
 
@@ -417,7 +473,7 @@ export class OrdersService {
       const {
         itemCount,
         subtotalPrice,
-        totalPrice: totalPirce,
+        totalPrice: totalPrice,
       } = this.calculatedOrder(updateOrderItems.orderItems);
 
       // 5. actualizar el pedido con los nuevos totales y items
@@ -426,7 +482,7 @@ export class OrdersService {
         data: {
           itemCount: itemCount,
           subtotalPrice: subtotalPrice,
-          totalPrice: totalPirce,
+          totalPrice: totalPrice,
         },
         include: {
           orderItems: {
@@ -572,7 +628,7 @@ export class OrdersService {
       );
     }
 
-    if (order.finalcialStatus === 'VOIDED') {
+    if (order.financialStatus === 'VOIDED') {
       throw new BadRequestException(
         'Voided orders cannot be opened again. Please, create a new order instead.',
       );
@@ -834,6 +890,44 @@ export class OrdersService {
     }
 
     return { financialStatus, paidAt };
+  }
+
+  private buildDateFilter(startDate?: string, endDate?: string) {
+    const dateFilter: DateTimeFilter<'Order'> = {};
+
+    if (!startDate && !endDate) {
+      const now = new Date();
+      const startOfDay = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      );
+      const endOfDay = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        23,
+        59,
+        59,
+        999,
+      );
+
+      dateFilter.gte = startOfDay;
+      dateFilter.lte = endOfDay;
+    } else {
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        dateFilter.gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        dateFilter.lte = end;
+      }
+    }
+
+    return Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {};
   }
 
   private handleDBExceptions(error: any): never {

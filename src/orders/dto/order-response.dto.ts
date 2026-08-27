@@ -12,7 +12,7 @@ export class OrderResponseDto {
   email: string | null;
   phone: string | null;
   customer: Customer | null;
-  finalcialStatus: FinancialStatus;
+  financialStatus: FinancialStatus;
   status: OrderStatus;
   cancelledAt: Date | null;
   cancelReason: string | null;
