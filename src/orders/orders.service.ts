@@ -11,31 +11,31 @@ import {
   Decimal,
   PrismaClientKnownRequestError,
 } from '@prisma/client/runtime/client';
-import { PrismaService } from 'src/prisma.service';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { OrderItemDto } from './dto/order-item.dto';
-import { OrdersPaginationDto } from './dto/orders-pagination.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
-import { AddItemsDto } from './dto/add-items.dto';
-import { EditItemQuantityDto } from './dto/edit-item-quantity.dto';
-import { CancelOrderDto } from './dto/cancel-order.dto';
-import { CreatePaymentDto } from './dto/create-payment.dto';
+import { PrismaService } from '../prisma.service.js';
+import { CreateOrderDto } from './dto/create-order.dto.js';
+import { OrderItemDto } from './dto/order-item.dto.js';
+import { OrdersPaginationDto } from './dto/orders-pagination.dto.js';
+import { UpdateOrderDto } from './dto/update-order.dto.js';
+import { AddItemsDto } from './dto/add-items.dto.js';
+import { EditItemQuantityDto } from './dto/edit-item-quantity.dto.js';
+import { CancelOrderDto } from './dto/cancel-order.dto.js';
+import { CreatePaymentDto } from './dto/create-payment.dto.js';
 
-import { OrdersMapper } from './mapper/orders.mapper';
+import { OrdersMapper } from './mapper/orders.mapper.js';
 
 import type {
   FinancialStatus,
   Order,
   Product,
   User,
-} from 'src/generated/prisma/client';
+} from '../generated/prisma/client.js';
 import type {
   DateTimeFilter,
   OrderOrderByWithRelationInput,
   OrderWhereInput,
-} from 'src/generated/prisma/models';
-import type { TransactionClient } from 'src/generated/prisma/internal/prismaNamespace';
-import { OrderStatsDto } from './dto/order-stats.dto';
+} from '../generated/prisma/models.js';
+import type { TransactionClient } from '../generated/prisma/internal/prismaNamespace.js';
+import { OrderStatsDto } from './dto/order-stats.dto.js';
 
 @Injectable()
 export class OrdersService {

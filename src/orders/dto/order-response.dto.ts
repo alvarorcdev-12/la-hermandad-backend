@@ -1,6 +1,6 @@
 import { Decimal } from '@prisma/client/runtime/client';
-import type { Customer } from 'src/generated/prisma/client';
-import { FinancialStatus, OrderStatus } from 'src/generated/prisma/enums';
+import type { Customer } from '../../generated/prisma/client.js';
+import { FinancialStatus, OrderStatus } from '../../generated/prisma/enums.js';
 
 export class OrderResponseDto {
   id: string;

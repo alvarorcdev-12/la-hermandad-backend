@@ -9,12 +9,12 @@ import {
   ParseUUIDPipe,
   Query,
 } from '@nestjs/common';
-import { CustomersService } from './customers.service';
-import { CreateCustomerDto } from './dto/create-customer.dto';
-import { UpdateCustomerDto } from './dto/update-customer.dto';
-import { Auth } from 'src/auth/decorators/auth.decorator';
-import { GetUser } from 'src/auth/decorators/get-user.decorator';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { CustomersService } from './customers.service.js';
+import { CreateCustomerDto } from './dto/create-customer.dto.js';
+import { UpdateCustomerDto } from './dto/update-customer.dto.js';
+import { Auth } from '../auth/decorators/auth.decorator.js';
+import { GetUser } from '../auth/decorators/get-user.decorator.js';
+import { PaginationDto } from '../common/dto/pagination.dto.js';
 
 @Controller('customers')
 export class CustomersController {

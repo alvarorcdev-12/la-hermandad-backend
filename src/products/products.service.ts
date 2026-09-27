@@ -4,18 +4,18 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
-import { PrismaService } from 'src/prisma.service';
-import { ProductsPaginationDto } from './dto/products-pagination.dto';
+import { CreateProductDto } from './dto/create-product.dto.js';
+import { UpdateProductDto } from './dto/update-product.dto.js';
+import { PrismaService } from '../prisma.service.js';
+import { ProductsPaginationDto } from './dto/products-pagination.dto.js';
 
-import { ProductsMapper } from './mappers/product.mapper';
+import { ProductsMapper } from './mappers/product.mapper.js';
 
 import type {
   ProductOrderByWithRelationInput,
   ProductWhereInput,
-} from 'src/generated/prisma/models';
-import { DBExceptionHelper } from 'src/common/helpers/db-exception.helper';
+} from '../generated/prisma/models.js';
+import { DBExceptionHelper } from '../common/helpers/db-exception.helper.js';
 
 @Injectable()
 export class ProductsService {

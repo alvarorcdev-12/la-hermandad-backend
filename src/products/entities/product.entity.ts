@@ -1,5 +1,5 @@
 import { Decimal } from '@prisma/client/runtime/client';
-import { ProductStatus } from 'src/generated/prisma/enums';
+import { ProductStatus } from '../../generated/prisma/enums.js';
 
 export class Product {
   id: string;

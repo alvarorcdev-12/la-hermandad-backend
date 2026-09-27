@@ -9,12 +9,12 @@ import {
   Query,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { CategoriesService } from './categories.service';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
-import { Auth } from 'src/auth/decorators/auth.decorator';
-import { GetUser } from 'src/auth/decorators/get-user.decorator';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { CategoriesService } from './categories.service.js';
+import { CreateCategoryDto } from './dto/create-category.dto.js';
+import { UpdateCategoryDto } from './dto/update-category.dto.js';
+import { Auth } from '../auth/decorators/auth.decorator.js';
+import { GetUser } from '../auth/decorators/get-user.decorator.js';
+import { PaginationDto } from '../common/dto/pagination.dto.js';
 
 @Controller('categories')
 export class CategoriesController {

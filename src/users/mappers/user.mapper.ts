@@ -1,5 +1,5 @@
-import { User } from '../entities/user.entity';
-import type { UserGetPayload } from 'src/generated/prisma/models';
+import { User } from '../entities/user.entity.js';
+import type { UserGetPayload } from '../../generated/prisma/models.js';
 
 type UserDB = UserGetPayload<{ include: { store: true } }>;
 

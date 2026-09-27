@@ -9,7 +9,7 @@ import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
 import { PaginationDto } from '../common/dto/pagination.dto.js';
 import { CategoryMapper } from './mappers/category.mapper.js';
-import { DBExceptionHelper } from 'src/common/helpers/db-exception.helper.js';
+import { DBExceptionHelper } from '../common/helpers/db-exception.helper.js';
 
 import type { CategoryWhereInput } from '../generated/prisma/models.js';
 

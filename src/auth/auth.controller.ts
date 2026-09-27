@@ -1,11 +1,11 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { RegisterUserDto } from './dto/register-user.dto';
-import { LoginUserDto } from './dto/login-user.dto';
-import { GetUser } from './decorators/get-user.decorator';
-import { Auth } from './decorators/auth.decorator';
+import { AuthService } from './auth.service.js';
+import { RegisterUserDto } from './dto/register-user.dto.js';
+import { LoginUserDto } from './dto/login-user.dto.js';
+import { GetUser } from './decorators/get-user.decorator.js';
+import { Auth } from './decorators/auth.decorator.js';
 
-import type { UserGetPayload } from 'src/generated/prisma/models';
+import type { UserGetPayload } from '../generated/prisma/models.js';
 
 @Controller('auth')
 export class AuthController {

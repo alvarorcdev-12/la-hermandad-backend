@@ -8,7 +8,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { ProductStatus } from 'src/generated/prisma/enums';
+import { ProductStatus } from '../../generated/prisma/enums.js';
 
 export class CreateProductDto {
   @IsString()

@@ -1,5 +1,5 @@
-import { OrderGetPayload } from 'src/generated/prisma/models';
-import { OrderResponseDto } from '../dto/order-response.dto';
+import { OrderGetPayload } from '../../generated/prisma/models.js';
+import { OrderResponseDto } from '../dto/order-response.dto.js';
 
 type OrderDB = OrderGetPayload<{
   include: { orderItems: true; customer: true };

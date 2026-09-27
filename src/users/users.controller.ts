@@ -9,14 +9,14 @@ import {
   Query,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { Auth } from 'src/auth/decorators/auth.decorator';
-import { GetUser } from 'src/auth/decorators/get-user.decorator';
-import type { User } from 'src/generated/prisma/client';
-import { ChangePasswordDto } from './dto/change-password.dto';
+import { UsersService } from './users.service.js';
+import { CreateUserDto } from './dto/create-user.dto.js';
+import { UpdateUserDto } from './dto/update-user.dto.js';
+import { PaginationDto } from '../common/dto/pagination.dto.js';
+import { Auth } from '../auth/decorators/auth.decorator.js';
+import { GetUser } from '../auth/decorators/get-user.decorator.js';
+import type { User } from '../generated/prisma/client.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
 
 @Controller('users')
 export class UsersController {

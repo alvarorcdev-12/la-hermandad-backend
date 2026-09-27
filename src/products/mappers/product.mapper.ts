@@ -1,5 +1,5 @@
-import { ProductGetPayload } from 'src/generated/prisma/models';
-import { Product } from '../entities/product.entity';
+import { ProductGetPayload } from '../../generated/prisma/models.js';
+import { Product } from '../entities/product.entity.js';
 
 type ProductDB = ProductGetPayload<{
   include: {

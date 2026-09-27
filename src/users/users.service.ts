@@ -8,23 +8,23 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { PrismaService } from 'src/prisma.service';
+import { PrismaService } from '../prisma.service.js';
 
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { ChangePasswordDto } from './dto/change-password.dto';
+import { CreateUserDto } from './dto/create-user.dto.js';
+import { UpdateUserDto } from './dto/update-user.dto.js';
+import { PaginationDto } from '../common/dto/pagination.dto.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
 
-import { UserMapper } from './mappers/user.mapper';
+import { UserMapper } from './mappers/user.mapper.js';
 
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 
 import type {
   UserOrderByWithRelationInput,
   UserWhereInput,
-} from 'src/generated/prisma/models';
-import type { User } from 'src/generated/prisma/client';
-import { DBExceptionHelper } from 'src/common/helpers/db-exception.helper';
+} from '../generated/prisma/models.js';
+import type { User } from '../generated/prisma/client.js';
+import { DBExceptionHelper } from '../common/helpers/db-exception.helper.js';
 
 @Injectable()
 export class UsersService {

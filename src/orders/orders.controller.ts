@@ -8,20 +8,20 @@ import {
   ParseUUIDPipe,
   Query,
 } from '@nestjs/common';
-import { OrdersService } from './orders.service';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
-import { OrdersPaginationDto } from './dto/orders-pagination.dto';
-import { AddItemsDto } from './dto/add-items.dto';
-import { EditItemQuantityDto } from './dto/edit-item-quantity.dto';
-import { CancelOrderDto } from './dto/cancel-order.dto';
-import { CreatePaymentDto } from './dto/create-payment.dto';
+import { OrdersService } from './orders.service.js';
+import { CreateOrderDto } from './dto/create-order.dto.js';
+import { UpdateOrderDto } from './dto/update-order.dto.js';
+import { OrdersPaginationDto } from './dto/orders-pagination.dto.js';
+import { AddItemsDto } from './dto/add-items.dto.js';
+import { EditItemQuantityDto } from './dto/edit-item-quantity.dto.js';
+import { CancelOrderDto } from './dto/cancel-order.dto.js';
+import { CreatePaymentDto } from './dto/create-payment.dto.js';
 
-import { GetUser } from 'src/auth/decorators/get-user.decorator';
-import { Auth } from 'src/auth/decorators/auth.decorator';
+import { GetUser } from '../auth/decorators/get-user.decorator.js';
+import { Auth } from '../auth/decorators/auth.decorator.js';
 
-import type { User } from 'src/generated/prisma/client';
-import { OrderStatsDto } from './dto/order-stats.dto';
+import type { User } from '../generated/prisma/client.js';
+import { OrderStatsDto } from './dto/order-stats.dto.js';
 
 @Controller('orders')
 export class OrdersController {

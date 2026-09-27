@@ -1,5 +1,5 @@
 import { IsNumber, Min, IsEnum, IsOptional, IsString } from 'class-validator';
-import { PaymentMethod } from 'src/generated/prisma/enums';
+import { PaymentMethod } from '../../generated/prisma/enums.js';
 
 export class CreatePaymentDto {
   @IsNumber({ maxDecimalPlaces: 2 })

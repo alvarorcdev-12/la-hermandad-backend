@@ -1,6 +1,6 @@
 import { IsEnum, IsIn, IsOptional, IsString } from 'class-validator';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { ProductStatus } from 'src/generated/prisma/enums';
+import { PaginationDto } from '../../common/dto/pagination.dto.js';
+import { ProductStatus } from '../../generated/prisma/enums.js';
 
 export class ProductsPaginationDto extends PaginationDto {
   @IsEnum(ProductStatus)

@@ -8,7 +8,7 @@ import { UpdateCustomerDto } from './dto/update-customer.dto.js';
 import { PaginationDto } from '../common/dto/pagination.dto.js';
 
 import { PrismaService } from '../prisma.service.js';
-import { DBExceptionHelper } from '../common/helpers/db-exception.helper';
+import { DBExceptionHelper } from '../common/helpers/db-exception.helper.js';
 
 import type { CustomerWhereInput } from '../generated/prisma/models.js';
 import { CustomerMapper } from './mappers/customer.mapper.js';

@@ -9,12 +9,12 @@ import {
   Query,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { ProductsService } from './products.service';
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
-import { Auth } from 'src/auth/decorators/auth.decorator';
-import { GetUser } from 'src/auth/decorators/get-user.decorator';
-import { ProductsPaginationDto } from './dto/products-pagination.dto';
+import { ProductsService } from './products.service.js';
+import { CreateProductDto } from './dto/create-product.dto.js';
+import { UpdateProductDto } from './dto/update-product.dto.js';
+import { Auth } from '../auth/decorators/auth.decorator.js';
+import { GetUser } from '../auth/decorators/get-user.decorator.js';
+import { ProductsPaginationDto } from './dto/products-pagination.dto.js';
 
 @Controller('products')
 export class ProductsController {
