@@ -57,8 +57,8 @@ export class UserMapper {
     const firstInitial = firstName.charAt(0).toUpperCase();
 
     const lastInitial = !lastName
-      ? firstName.split(' ').length > 0
-        ? firstName.split(' ')[1].charAt(0).toUpperCase()
+      ? firstName.trim().split(/\s+/).length > 1
+        ? firstName.trim().split(/\s+/)[1].charAt(0).toUpperCase()
         : firstName.charAt(1).toUpperCase()
       : lastName?.charAt(0)?.toUpperCase();
 

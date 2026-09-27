@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
+import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma.service.js';
 import { RegisterUserDto } from './dto/register-user.dto.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
@@ -49,65 +50,54 @@ export class AuthService {
   }
 
   async register(registerUserDto: RegisterUserDto) {
-    const prismaTx = await this.prismaService.$transaction(async (tx) => {
-      // 1. Verificar si existe email
-      const emailExist = await tx.user.findUnique({
-        where: { email: registerUserDto.email },
-        include: {
-          store: true,
-        },
-      });
+    const emailExist = await this.prismaService.user.findUnique({
+      where: { email: registerUserDto.email },
+      select: { id: true },
+    });
 
-      if (emailExist) {
-        throw new BadRequestException('El correo electrónico ya existe');
-      }
+    if (emailExist) {
+      throw new BadRequestException('El correo electrónico ya existe');
+    }
 
-      // 2. Crear Tienda
-      const store = await tx.store.create({
+    const password = await bcrypt.hash(registerUserDto.password, 10);
+    let user: UserGetPayload<{ include: { store: true } }>;
+
+    try {
+      // Nested writes create all registration records atomically.
+      user = await this.prismaService.user.create({
         data: {
-          name: registerUserDto.storeName,
-        },
-      });
-
-      // 3. Store Setting
-      await tx.storeSetting.create({
-        data: {
-          storeId: store.id,
-        },
-      });
-
-      // 4. Crear local
-      await tx.location.create({
-        data: {
-          storeId: store.id,
-          name: 'Store Location',
-          isDefault: true,
-        },
-      });
-
-      // 5. Crear owner de la store
-
-      const user = await tx.user.create({
-        data: {
-          storeId: store.id,
           firstName: registerUserDto.firstName,
           lastName: registerUserDto.lastName,
           email: registerUserDto.email,
-          password: bcrypt.hashSync(registerUserDto.password, 10),
+          password,
           role: 'OWNER',
           isShopOwner: true,
+          store: {
+            create: {
+              name: registerUserDto.storeName,
+              settings: { create: {} },
+              locations: {
+                create: { name: 'Store Location', isDefault: true },
+              },
+            },
+          },
         },
-        include: {
-          store: true,
-        },
+        include: { store: true },
       });
-
-      return user;
-    });
+    } catch (error) {
+      // The unique constraint also handles simultaneous registrations.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new BadRequestException('El correo electrónico ya existe');
+      }
+      throw error;
+    }
 
     return {
-      token: this.getJWTToken({ id: prismaTx.id }),
-      user: UserMapper.toEntity(prismaTx),
+      token: this.getJWTToken({ id: user.id }),
+      user: UserMapper.toEntity(user),
     };
   }
 
