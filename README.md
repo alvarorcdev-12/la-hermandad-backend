@@ -6,7 +6,7 @@ API REST en NestJS 11, TypeScript y PostgreSQL con Prisma. Incluye autenticació
 
 ```bash
 pnpm install
-cp .env.exmaple .env
+cp .env.example .env
 ```
 
 Configura `.env` con `APP_PORT` (3000), `API_PREFIX` (api), un `JWT_SECRET` privado y `DATABASE_URL`. Para el PostgreSQL del `docker-compose.yml`, el puerto del host es **5433**:
@@ -23,6 +23,56 @@ pnpm exec prisma generate
 pnpm exec prisma migrate deploy
 pnpm run start:dev
 ```
+
+## Despliegue en Render
+
+El build genera el cliente Prisma antes de compilar NestJS. `src/generated/prisma`
+no se sube a Git; omitir la generación provoca errores como `Property 'customer'
+does not exist on type 'PrismaService'`.
+
+Para el servicio que ya existe, sube estos cambios y configura en Render:
+
+| Ajuste | Valor |
+| --- | --- |
+| Runtime | Node |
+| Build Command | `corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm run build` |
+| Start Command | `pnpm run start:render` |
+| Health Check Path | `/api/docs/openapi.json` |
+
+Variables de entorno:
+
+| Variable | Valor |
+| --- | --- |
+| `NODE_VERSION` | `24.18.0` |
+| `NODE_ENV` | `production` |
+| `API_PREFIX` | `api` |
+| `DATABASE_URL` | URL PostgreSQL de producción; usa la Internal Database URL si la base está en Render y en la misma región |
+| `JWT_SECRET` | Secreto aleatorio privado; conserva el existente si ya tienes usuarios con sesiones activas |
+
+Puedes generar un secreto con `node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"`.
+Render asigna `PORT` automáticamente; tiene prioridad sobre `APP_PORT`. El servidor
+escucha en `0.0.0.0`. No subas `.env` ni uses `localhost` para la base de producción.
+
+Para crear un servicio nuevo también puedes usar **New > Blueprint** con
+[render.yaml](render.yaml): solicita `DATABASE_URL` y genera `JWT_SECRET`.
+El Blueprint define solo el backend; debes proporcionar una base PostgreSQL.
+Agregar el archivo no cambia automáticamente un servicio creado manualmente.
+
+El arranque ejecuta `prisma migrate deploy` y solo inicia el servidor si las
+migraciones terminan correctamente. Funciona sin un comando pre-deploy, incluso
+en un servicio gratuito. Las dependencias de desarrollo se instalan explícitamente
+porque contienen Prisma CLI y el compilador. No ejecutes `migrate dev` ni
+`migrate reset` en producción. Si la base ya tiene tablas creadas sin historial de
+Prisma, requiere un baseline antes de aplicar las migraciones existentes.
+
+Tras guardar la configuración, ejecuta **Manual Deploy > Clear build cache & deploy**.
+Comprueba `https://TU-SERVICIO.onrender.com/api/docs`. El health check verifica
+que HTTP responde; no consulta la base de datos. Si cambias `API_PREFIX`, ajusta
+también su ruta.
+
+Referencias: [servicios web y puertos](https://render.com/docs/web-services),
+[despliegues de Render](https://render.com/docs/deploys) y
+[migraciones de producción](https://docs.prisma.io/docs/cli/migrate/deploy).
 
 ## Swagger y OpenAPI
 

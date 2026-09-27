@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: la-hermandad-backend
+    runtime: node
+    plan: free
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm run build
+    startCommand: pnpm run start:render
+    healthCheckPath: /api/docs/openapi.json
+    envVars:
+      - key: NODE_VERSION
+        value: 24.18.0
+      - key: NODE_ENV
+        value: production
+      - key: API_PREFIX
+        value: api
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
