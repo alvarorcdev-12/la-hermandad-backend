@@ -11,6 +11,7 @@ export class OrderResponseDto {
   totalPrice: Decimal;
   email: string | null;
   phone: string | null;
+  note: string | null;
   customer: Customer | null;
   financialStatus: FinancialStatus;
   status: OrderStatus;

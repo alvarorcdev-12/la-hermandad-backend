@@ -99,7 +99,7 @@ export class OrdersService {
           itemCount,
         } = this.calculatedOrder(orderItems);
 
-        // 7. Decrementar invetoryQuantity si product.trackInventory = true
+        // 7. Decremental invetoryQuantity si product.trackInventory = true
 
         const trackedProducts = orderItems.filter(
           (item) => item.trackInventory,
@@ -193,6 +193,8 @@ export class OrdersService {
       q,
     } = ordersPaginationDto;
 
+    // const dateFilter = this.buildDateFilter(startDate, endDate);
+
     const orderBy: OrderOrderByWithRelationInput = {
       [sort ?? 'createdAt']: direction ?? 'desc',
     };
@@ -200,6 +202,7 @@ export class OrdersService {
     const where: OrderWhereInput = {
       storeId: storeId,
       status: status,
+      // ...dateFilter,
     };
 
     if (q) {
@@ -729,9 +732,9 @@ export class OrdersService {
     }
 
     const invalidFinancialStatuses = ['PENDING', 'PARTIALLY_PAID'];
-    if (invalidFinancialStatuses.includes(order.finalcialStatus)) {
+    if (invalidFinancialStatuses.includes(order.financialStatus)) {
       throw new BadRequestException(
-        `Cannot close order. Financial status is ${order.finalcialStatus}. All transactions must be finalized (PAID, REFUNDED, etc.).`,
+        `Cannot close order. Financial status is ${order.financialStatus}. All transactions must be finalized (PAID, REFUNDED, etc.).`,
       );
     }
     try {
