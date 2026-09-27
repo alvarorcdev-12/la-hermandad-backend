@@ -142,7 +142,7 @@ export class ProductsService {
     });
 
     if (!product) {
-      throw new NotFoundException(`Product with id ${id} not found`);
+      throw new NotFoundException(`Producto con id ${id} no encontrado`);
     }
 
     return ProductsMapper.toEntity(product);

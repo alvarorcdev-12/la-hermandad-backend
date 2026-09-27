@@ -43,7 +43,9 @@ export class UsersService {
     });
 
     if (existUser) {
-      throw new BadRequestException('User already exists with email: ' + email);
+      throw new BadRequestException(
+        'Ya existe un usuario con el correo electrónico: ' + email,
+      );
     }
 
     const user = await this.prismaService.user.create({
@@ -147,7 +149,7 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new BadRequestException('Usuario no encontrado');
     }
 
     return UserMapper.toEntity(user);
@@ -244,12 +246,12 @@ export class UsersService {
     );
 
     if (!isMatchPassword) {
-      throw new BadRequestException('Invalid current password');
+      throw new BadRequestException('La contraseña actual es incorrecta');
     }
 
     if (changePasswordDto.newPassword === changePasswordDto.currentPassword) {
       throw new BadRequestException(
-        'New password must be different from current password',
+        'La nueva contraseña debe ser diferente de la contraseña actual',
       );
     }
 
@@ -284,24 +286,21 @@ export class UsersService {
       switch (error.code) {
         case 'P2002': {
           const target = error.meta?.target as string[] | undefined;
-          const fields = target ? target.join(', ') : 'unknown field';
+          const fields = target ? target.join(', ') : 'campo desconocido';
 
           throw new ConflictException(
-            `Duplicate value: The field(s) [${fields}] must be unique.`,
+            `Valor duplicado: Los campos [${fields}] deben ser únicos.`,
           );
         }
 
         case 'P2025': {
-          const cause = error.meta?.cause as string | undefined;
-          throw new NotFoundException(
-            cause || 'A required record was not found.',
-          );
+          throw new NotFoundException('No se encontró el registro requerido.');
         }
 
         case 'P2003': {
           const field = error.meta?.field_name as string | undefined;
           throw new BadRequestException(
-            `Cannot perform operation: The referenced ${field || 'field'} does not exist.`,
+            `No se puede realizar la operación: El campo referenciado ${field || 'desconocido'} no existe.`,
           );
         }
       }
@@ -310,7 +309,7 @@ export class UsersService {
     this.logger.error('Unexpected error in OrdersService', error.stack);
 
     throw new InternalServerErrorException(
-      'Internal server error. Please try again later.',
+      'Error interno del servidor. Intente nuevamente más tarde.',
     );
   }
 }

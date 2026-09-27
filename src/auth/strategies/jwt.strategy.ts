@@ -20,7 +20,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const jwtSecret = configService.get<string>('jwt.secret');
     if (!jwtSecret) {
       throw new InternalServerErrorException(
-        'JWT_SECRET not found in environment variables',
+        'JWT_SECRET no se encontró en las variables de entorno',
       );
     }
 
@@ -39,12 +39,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Credenciales inválidas');
     }
 
     if (!user.isActive) {
       throw new UnauthorizedException(
-        'Your account is inactive, talk with an administrator',
+        'Su cuenta está inactiva, contacte con un administrador',
       );
     }
 

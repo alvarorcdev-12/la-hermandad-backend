@@ -130,7 +130,7 @@ export class OrdersService {
           updateProductStock.forEach((result, index) => {
             if (result.count === 0) {
               throw new BadRequestException(
-                `Insufficient stock for product "${trackedProducts[index].productTitle}".`,
+                `Existencias insuficientes para el producto "${trackedProducts[index].productTitle}".`,
               );
             }
           });
@@ -352,7 +352,7 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException(`Order with id: ${id} not found`);
+      throw new NotFoundException(`Pedido con id: ${id} no encontrado`);
     }
 
     return OrdersMapper.toOrderResponseDto(order);
@@ -396,7 +396,9 @@ export class OrdersService {
     const order = await this.findOne(id, storeId);
 
     if (order.status !== 'OPEN') {
-      throw new BadRequestException('The order must be open to add items');
+      throw new BadRequestException(
+        'El pedido debe estar abierto para agregar artículos',
+      );
     }
 
     const { productIds } = addItemsDto;
@@ -466,7 +468,7 @@ export class OrdersService {
         updateProductStock.forEach((result, index) => {
           if (result.count === 0) {
             throw new BadRequestException(
-              `Insufficient stock for product "${trackedProducts[index].productTitle}".`,
+              `Existencias insuficientes para el producto "${trackedProducts[index].productTitle}".`,
             );
           }
         });
@@ -513,7 +515,7 @@ export class OrdersService {
 
     if (currentOrder.status !== 'OPEN') {
       throw new BadRequestException(
-        'The order must be open to edit item quantity.',
+        'El pedido debe estar abierto para modificar la cantidad de un artículo.',
       );
     }
 
@@ -552,7 +554,7 @@ export class OrdersService {
 
           if (result.count === 0) {
             throw new BadRequestException(
-              `Insufficient stock for product "${currentItem.product.title}".`,
+              `Existencias insuficientes para el producto "${currentItem.product.title}".`,
             );
           }
         } else if (delta < 0 && restock) {
@@ -627,13 +629,13 @@ export class OrdersService {
 
     if (order.status !== 'CLOSED') {
       throw new BadRequestException(
-        'Only closed orders can be opened again. (un-close)',
+        'Solo los pedidos cerrados pueden volver a abrirse.',
       );
     }
 
     if (order.financialStatus === 'VOIDED') {
       throw new BadRequestException(
-        'Voided orders cannot be opened again. Please, create a new order instead.',
+        'Los pedidos anulados no pueden volver a abrirse. Cree un nuevo pedido.',
       );
     }
 
@@ -672,7 +674,7 @@ export class OrdersService {
     }
 
     if (order.status === 'CLOSED') {
-      throw new BadRequestException('Cannot cancel a closed order.');
+      throw new BadRequestException('No se puede cancelar un pedido cerrado.');
     }
 
     return this.prismaService.$transaction(async (tx) => {
@@ -728,13 +730,15 @@ export class OrdersService {
     const order = await this.findOne(id, storeId);
 
     if (order.status !== 'OPEN') {
-      throw new BadRequestException('Cannot close an order that is not open.');
+      throw new BadRequestException(
+        'No se puede cerrar un pedido que no está abierto.',
+      );
     }
 
     const invalidFinancialStatuses = ['PENDING', 'PARTIALLY_PAID'];
     if (invalidFinancialStatuses.includes(order.financialStatus)) {
       throw new BadRequestException(
-        `Cannot close order. Financial status is ${order.financialStatus}. All transactions must be finalized (PAID, REFUNDED, etc.).`,
+        `No se puede cerrar el pedido. El estado financiero es ${order.financialStatus}. Todas las transacciones deben estar finalizadas (pagadas, reembolsadas, etc.).`,
       );
     }
     try {
@@ -776,13 +780,13 @@ export class OrdersService {
 
       if (order.financialStatus === 'PAID') {
         throw new BadRequestException(
-          'Cannot add payments to an order that is already fully paid.',
+          'No se pueden agregar pagos a un pedido que ya está pagado en su totalidad.',
         );
       }
 
       if (order.status === 'CANCELLED' || order.status === 'CLOSED') {
         throw new BadRequestException(
-          `Cannot add payments to an order with status ${order.status}.`,
+          `No se pueden agregar pagos a un pedido con estado ${order.status}.`,
         );
       }
 
@@ -819,7 +823,7 @@ export class OrdersService {
       const product = productsDB.find((p) => p.id === item.productId);
       if (!product) {
         throw new BadRequestException(
-          `Product with id: ${item.productId} was not found.`,
+          `No se encontró el producto con id: ${item.productId}.`,
         );
       }
 
@@ -942,24 +946,21 @@ export class OrdersService {
       switch (error.code) {
         case 'P2002': {
           const target = error.meta?.target as string[] | undefined;
-          const fields = target ? target.join(', ') : 'unknown field';
+          const fields = target ? target.join(', ') : 'campo desconocido';
 
           throw new ConflictException(
-            `Duplicate value: The field(s) [${fields}] must be unique.`,
+            `Valor duplicado: Los campos [${fields}] deben ser únicos.`,
           );
         }
 
         case 'P2025': {
-          const cause = error.meta?.cause as string | undefined;
-          throw new NotFoundException(
-            cause || 'A required record was not found.',
-          );
+          throw new NotFoundException('No se encontró el registro requerido.');
         }
 
         case 'P2003': {
           const field = error.meta?.field_name as string | undefined;
           throw new BadRequestException(
-            `Cannot perform operation: The referenced ${field || 'field'} does not exist.`,
+            `No se puede realizar la operación: El campo referenciado ${field || 'desconocido'} no existe.`,
           );
         }
       }
@@ -968,7 +969,7 @@ export class OrdersService {
     this.logger.error('Unexpected error in OrdersService', error.stack);
 
     throw new InternalServerErrorException(
-      'Internal server error. Please try again later.',
+      'Error interno del servidor. Intente nuevamente más tarde.',
     );
   }
 }

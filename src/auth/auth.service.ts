@@ -29,17 +29,17 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new BadRequestException('Usuario no encontrado');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password!);
 
     if (!isPasswordValid) {
-      throw new BadRequestException('Invalid credentials');
+      throw new BadRequestException('Credenciales inválidas');
     }
 
     if (!user.isActive) {
-      throw new BadRequestException('User is not active');
+      throw new BadRequestException('El usuario está inactivo');
     }
 
     return {
@@ -59,7 +59,7 @@ export class AuthService {
       });
 
       if (emailExist) {
-        throw new BadRequestException('Email already exists');
+        throw new BadRequestException('El correo electrónico ya existe');
       }
 
       // 2. Crear Tienda
