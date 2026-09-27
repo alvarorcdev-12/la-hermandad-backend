@@ -1,12 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  HttpException,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma.service.js';
 
@@ -16,8 +8,6 @@ import { PaginationDto } from '../common/dto/pagination.dto.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 
 import { UserMapper } from './mappers/user.mapper.js';
-
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 
 import type {
   UserOrderByWithRelationInput,
@@ -64,7 +54,7 @@ export class UsersService {
       },
     });
 
-    return UserMapper.toEntity(user);
+    return UserMapper.toStaffUserEntity(user);
   }
 
   async findAll(paginationDto: PaginationDto, storeId: string) {
@@ -133,7 +123,7 @@ export class UsersService {
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1,
       },
-      results: UserMapper.toEntityList(users),
+      results: UserMapper.toStaffUserEntityList(users),
     };
   }
 
@@ -152,7 +142,7 @@ export class UsersService {
       throw new BadRequestException('Usuario no encontrado');
     }
 
-    return UserMapper.toEntity(user);
+    return UserMapper.toStaffUserEntity(user);
   }
 
   async update(id: string, updateUserDto: UpdateUserDto, storeId: string) {
@@ -176,7 +166,7 @@ export class UsersService {
         },
       });
 
-      return UserMapper.toEntity(updateUser);
+      return UserMapper.toStaffUserEntity(updateUser);
     } catch (error) {
       DBExceptionHelper.handle(error);
     }
@@ -199,7 +189,7 @@ export class UsersService {
         },
       });
 
-      return UserMapper.toEntity(updateUser);
+      return UserMapper.toStaffUserEntity(updateUser);
     } catch (error) {
       DBExceptionHelper.handle(error);
     }
@@ -219,7 +209,7 @@ export class UsersService {
         },
       });
 
-      return UserMapper.toEntity(deleteUser);
+      return UserMapper.toStaffUserEntity(deleteUser);
     } catch (error) {
       DBExceptionHelper.handle(error);
     }
@@ -271,45 +261,9 @@ export class UsersService {
         },
       });
 
-      return UserMapper.toEntity(updateUser);
+      return UserMapper.toStaffUserEntity(updateUser);
     } catch (error) {
       DBExceptionHelper.handle(error);
     }
-  }
-
-  private handleDBExceptions(error: any): never {
-    if (error instanceof HttpException) {
-      throw error;
-    }
-
-    if (error instanceof PrismaClientKnownRequestError) {
-      switch (error.code) {
-        case 'P2002': {
-          const target = error.meta?.target as string[] | undefined;
-          const fields = target ? target.join(', ') : 'campo desconocido';
-
-          throw new ConflictException(
-            `Valor duplicado: Los campos [${fields}] deben ser únicos.`,
-          );
-        }
-
-        case 'P2025': {
-          throw new NotFoundException('No se encontró el registro requerido.');
-        }
-
-        case 'P2003': {
-          const field = error.meta?.field_name as string | undefined;
-          throw new BadRequestException(
-            `No se puede realizar la operación: El campo referenciado ${field || 'desconocido'} no existe.`,
-          );
-        }
-      }
-    }
-
-    this.logger.error('Unexpected error in OrdersService', error.stack);
-
-    throw new InternalServerErrorException(
-      'Error interno del servidor. Intente nuevamente más tarde.',
-    );
   }
 }
