@@ -1,9 +1,6 @@
 import {
   BadRequestException,
-  ConflictException,
-  HttpException,
   Injectable,
-  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service.js';
@@ -12,8 +9,8 @@ import { CreateCategoryDto } from './dto/create-category.dto.js';
 import { UpdateCategoryDto } from './dto/update-category.dto.js';
 import { PaginationDto } from '../common/dto/pagination.dto.js';
 import { CategoryMapper } from './mappers/category.mapper.js';
+import { DBExceptionHelper } from 'src/common/helpers/db-exception.helper.js';
 
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 import type { CategoryWhereInput } from '../generated/prisma/models.js';
 
 @Injectable()
@@ -47,7 +44,7 @@ export class CategoriesService {
 
       return CategoryMapper.toEntity(category);
     } catch (error) {
-      this.handleDBExceptions(error);
+      DBExceptionHelper.handle(error);
     }
   }
 
@@ -137,7 +134,7 @@ export class CategoriesService {
 
       return CategoryMapper.toEntity(updatedCategory);
     } catch (error) {
-      this.handleDBExceptions(error);
+      DBExceptionHelper.handle(error);
     }
   }
 
@@ -152,47 +149,7 @@ export class CategoriesService {
         },
       });
     } catch (error) {
-      this.handleDBExceptions(error);
+      DBExceptionHelper.handle(error);
     }
-  }
-
-  private handleDBExceptions(error: any): never {
-    if (error instanceof HttpException) {
-      throw error;
-    }
-
-    if (error instanceof PrismaClientKnownRequestError) {
-      switch (error.code) {
-        case 'P2002': {
-          const target = error.meta?.target as string[] | undefined;
-          const fields = target ? target.join(', ') : 'unknown field';
-
-          throw new ConflictException(
-            `Duplicate value: The field(s) [${fields}] must be unique.`,
-          );
-        }
-
-        case 'P2025': {
-          const cause = error.meta?.cause as string | undefined;
-          throw new NotFoundException(
-            cause || 'A required record was not found.',
-          );
-        }
-
-        case 'P2003': {
-          const field = error.meta?.field_name as string | undefined;
-          throw new BadRequestException(
-            `Cannot perform operation: The referenced ${field || 'field'} does not exist.`,
-          );
-        }
-      }
-    }
-
-    // this.logger.error('Unexpected error in OrdersService', error.stack);
-    console.log({ error });
-
-    throw new InternalServerErrorException(
-      'Internal server error. Please try again later.',
-    );
   }
 }

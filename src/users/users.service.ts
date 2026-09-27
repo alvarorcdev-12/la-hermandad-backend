@@ -15,7 +15,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 
-import { UsersMapper } from './mapper/users.mapper';
+import { UserMapper } from './mappers/user.mapper';
 
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 
@@ -24,6 +24,7 @@ import type {
   UserWhereInput,
 } from 'src/generated/prisma/models';
 import type { User } from 'src/generated/prisma/client';
+import { DBExceptionHelper } from 'src/common/helpers/db-exception.helper';
 
 @Injectable()
 export class UsersService {
@@ -61,7 +62,7 @@ export class UsersService {
       },
     });
 
-    return UsersMapper.toUserResponseDto(user);
+    return UserMapper.toEntity(user);
   }
 
   async findAll(paginationDto: PaginationDto, storeId: string) {
@@ -130,7 +131,7 @@ export class UsersService {
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1,
       },
-      results: UsersMapper.toUserResponseDtoList(users),
+      results: UserMapper.toEntityList(users),
     };
   }
 
@@ -149,7 +150,7 @@ export class UsersService {
       throw new BadRequestException('User not found');
     }
 
-    return UsersMapper.toUserResponseDto(user);
+    return UserMapper.toEntity(user);
   }
 
   async update(id: string, updateUserDto: UpdateUserDto, storeId: string) {
@@ -173,9 +174,9 @@ export class UsersService {
         },
       });
 
-      return UsersMapper.toUserResponseDto(updateUser);
+      return UserMapper.toEntity(updateUser);
     } catch (error) {
-      this.handleDBExceptions(error);
+      DBExceptionHelper.handle(error);
     }
   }
 
@@ -196,9 +197,9 @@ export class UsersService {
         },
       });
 
-      return UsersMapper.toUserResponseDto(updateUser);
+      return UserMapper.toEntity(updateUser);
     } catch (error) {
-      this.handleDBExceptions(error);
+      DBExceptionHelper.handle(error);
     }
   }
 
@@ -216,9 +217,9 @@ export class UsersService {
         },
       });
 
-      return UsersMapper.toUserResponseDto(deleteUser);
+      return UserMapper.toEntity(deleteUser);
     } catch (error) {
-      this.handleDBExceptions(error);
+      DBExceptionHelper.handle(error);
     }
   }
 
@@ -268,9 +269,9 @@ export class UsersService {
         },
       });
 
-      return UsersMapper.toUserResponseDto(updateUser);
+      return UserMapper.toEntity(updateUser);
     } catch (error) {
-      this.handleDBExceptions(error);
+      DBExceptionHelper.handle(error);
     }
   }
 

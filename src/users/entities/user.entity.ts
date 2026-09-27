@@ -1,6 +1,6 @@
 import { Role } from 'src/generated/prisma/enums';
 
-export class UserResponseDto {
+export class User {
   id: string;
   storeName: string;
   firstName: string;

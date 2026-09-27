@@ -9,12 +9,13 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaService } from 'src/prisma.service';
 import { ProductsPaginationDto } from './dto/products-pagination.dto';
 
-import { ProductsMapper } from './mappers/products.mapper';
+import { ProductsMapper } from './mappers/product.mapper';
 
 import type {
   ProductOrderByWithRelationInput,
   ProductWhereInput,
 } from 'src/generated/prisma/models';
+import { DBExceptionHelper } from 'src/common/helpers/db-exception.helper';
 
 @Injectable()
 export class ProductsService {
@@ -37,9 +38,9 @@ export class ProductsService {
         },
       });
 
-      return ProductsMapper.toProductResponseDto(product);
+      return ProductsMapper.toEntity(product);
     } catch (error) {
-      this.handleDBExceptions(error);
+      DBExceptionHelper.handle(error);
     }
   }
 
@@ -120,7 +121,7 @@ export class ProductsService {
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1,
       },
-      results: ProductsMapper.toProductResponseDtoList(products),
+      results: ProductsMapper.toEntityList(products),
     };
   }
 
@@ -144,7 +145,7 @@ export class ProductsService {
       throw new NotFoundException(`Product with id ${id} not found`);
     }
 
-    return ProductsMapper.toProductResponseDto(product);
+    return ProductsMapper.toEntity(product);
   }
 
   async update(
@@ -171,9 +172,9 @@ export class ProductsService {
         },
       });
 
-      return ProductsMapper.toProductResponseDto(updateProduct);
+      return ProductsMapper.toEntity(updateProduct);
     } catch (error) {
-      this.handleDBExceptions(error);
+      DBExceptionHelper.handle(error);
     }
   }
 
@@ -196,18 +197,9 @@ export class ProductsService {
         },
       });
 
-      return ProductsMapper.toProductResponseDto(deletedProduct);
+      return ProductsMapper.toEntity(deletedProduct);
     } catch (error) {
-      this.handleDBExceptions(error);
+      DBExceptionHelper.handle(error);
     }
-  }
-
-  private handleDBExceptions(error: any) {
-    console.log({ error });
-    if (error.code === 'P2002') {
-      throw new ConflictException('Duplicate value');
-    }
-
-    throw new InternalServerErrorException('Internal server error');
   }
 }

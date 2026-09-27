@@ -6,7 +6,7 @@ import { PrismaService } from 'src/prisma.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 
-import { UsersMapper } from 'src/users/mapper/users.mapper';
+import { UserMapper } from 'src/users/mappers/user.mapper';
 
 import type { JwtPayload } from './interfaces/jwt-payload.interface';
 import type { UserGetPayload } from 'src/generated/prisma/models';
@@ -44,7 +44,7 @@ export class AuthService {
 
     return {
       token: this.getJWTToken({ id: user.id }),
-      user: UsersMapper.toUserResponseDto(user),
+      user: UserMapper.toEntity(user),
     };
   }
 
@@ -107,14 +107,14 @@ export class AuthService {
 
     return {
       token: this.getJWTToken({ id: prismaTx.id }),
-      user: UsersMapper.toUserResponseDto(prismaTx),
+      user: UserMapper.toEntity(prismaTx),
     };
   }
 
   checkAuthStatus(user: UserGetPayload<{ include: { store: true } }>) {
     return {
       token: this.getJWTToken({ id: user.id }),
-      user: UsersMapper.toUserResponseDto(user),
+      user: UserMapper.toEntity(user),
     };
   }
 

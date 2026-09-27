@@ -1,16 +1,17 @@
 import {
-  ConflictException,
   ForbiddenException,
   Injectable,
-  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateCustomerDto } from './dto/create-customer.dto';
-import { UpdateCustomerDto } from './dto/update-customer.dto';
-import { PrismaService } from 'src/prisma.service';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { CustomerWhereInput } from 'src/generated/prisma/models';
-import { CustomersMapper } from './mappers/customers.mapper';
+import { CreateCustomerDto } from './dto/create-customer.dto.js';
+import { UpdateCustomerDto } from './dto/update-customer.dto.js';
+import { PaginationDto } from '../common/dto/pagination.dto.js';
+
+import { PrismaService } from '../prisma.service.js';
+import { DBExceptionHelper } from '../common/helpers/db-exception.helper';
+
+import type { CustomerWhereInput } from '../generated/prisma/models.js';
+import { CustomerMapper } from './mappers/customer.mapper.js';
 
 @Injectable()
 export class CustomersService {
@@ -27,15 +28,21 @@ export class CustomersService {
 
       return customer;
     } catch (error) {
-      this.handleDBExceptions(error);
+      DBExceptionHelper.handle(error);
     }
   }
 
   async findAll(paginationDto: PaginationDto, storeId: string) {
-    const { page = 1, limit = 10, q, sort, direction } = paginationDto;
+    const {
+      page = 1,
+      limit = 10,
+      sort = 'createdAt',
+      direction,
+      q,
+    } = paginationDto;
 
     const orderBy = {
-      [sort ?? 'createdAt']: direction ?? 'desc',
+      [sort]: direction || 'desc',
     };
 
     const where: CustomerWhereInput = {
@@ -70,14 +77,8 @@ export class CustomersService {
             select: { orders: true },
           },
           orders: {
-            orderBy: {
-              createdAt: 'desc',
-            },
             select: {
-              id: true,
               totalPrice: true,
-              orderName: true,
-              createdAt: true,
             },
           },
         },
@@ -98,7 +99,7 @@ export class CustomersService {
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1,
       },
-      results: CustomersMapper.toCustomerResponseDtoList(customers),
+      results: CustomerMapper.toEntityList(customers),
     };
   }
 
@@ -112,26 +113,19 @@ export class CustomersService {
         _count: {
           select: { orders: true },
         },
-
         orders: {
-          orderBy: {
-            createdAt: 'desc',
-          },
           select: {
-            id: true,
             totalPrice: true,
-            orderName: true,
-            createdAt: true,
           },
         },
       },
     });
 
     if (!customer) {
-      throw new NotFoundException(`Customer with id ${id} not found`);
+      throw new NotFoundException(`Cliente con id ${id} no encontrado`);
     }
 
-    return CustomersMapper.toCustomerResponseDto(customer);
+    return CustomerMapper.toEntity(customer);
   }
 
   async update(
@@ -152,7 +146,7 @@ export class CustomersService {
 
       return updatedCustomer;
     } catch (error) {
-      this.handleDBExceptions(error);
+      DBExceptionHelper.handle(error);
     }
   }
 
@@ -160,7 +154,7 @@ export class CustomersService {
     const customer = await this.findOne(id, storeId);
 
     if (!customer.canDelete) {
-      throw new ForbiddenException('Customer cannot be deleted');
+      throw new ForbiddenException('Cliente no puede ser eliminado');
     }
 
     try {
@@ -173,16 +167,7 @@ export class CustomersService {
 
       return deletedCustomer;
     } catch (error) {
-      this.handleDBExceptions(error);
+      DBExceptionHelper.handle(error);
     }
-  }
-
-  private handleDBExceptions(error: any) {
-    console.log({ error });
-    if (error.code === 'P2002') {
-      throw new ConflictException('Duplicate value');
-    }
-
-    throw new InternalServerErrorException('Internal server error');
   }
 }

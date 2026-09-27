@@ -1,15 +1,19 @@
-import { Product } from 'src/generated/prisma/client';
-import { ProductResponseDto } from '../dto/product-response.dto';
+import { ProductGetPayload } from 'src/generated/prisma/models';
+import { Product } from '../entities/product.entity';
 
-interface ProductDBResponse extends Product {
-  category: {
-    id: string;
-    name: string;
-  } | null;
-}
+type ProductDB = ProductGetPayload<{
+  include: {
+    category: {
+      select: {
+        id: true;
+        name: true;
+      };
+    };
+  };
+}>;
 
 export class ProductsMapper {
-  static toProductResponseDto(product: ProductDBResponse): ProductResponseDto {
+  static toEntity(product: ProductDB): Product {
     return {
       id: product.id,
       title: product.title,
@@ -27,9 +31,7 @@ export class ProductsMapper {
     };
   }
 
-  static toProductResponseDtoList(
-    products: ProductDBResponse[],
-  ): ProductResponseDto[] {
-    return products.map((product) => this.toProductResponseDto(product));
+  static toEntityList(products: ProductDB[]): Product[] {
+    return products.map((product) => this.toEntity(product));
   }
 }

@@ -1,10 +1,10 @@
 services:
-  la-hermandad-db:
+  la-hermandad-db-v1:
     container_name: ${DATABASE_NAME}
     image: postgres:17.6
     restart: always
     ports:
-      - 5432:5432
+      - 5433:5432
     volumes:
       - ./postgres:/var/lib/postgresql/data
     environment:
