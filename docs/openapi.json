@@ -1,0 +1,5379 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "description": "Público. Valida correo y contraseña. Usuario inexistente, contraseña incorrecta o cuenta inactiva producen 400. Devuelve JWT de 24 horas y perfil. No requiere autenticación.",
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operación completada (POST devuelve 201).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Iniciar sesión",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "description": "Público. Crea transaccionalmente tienda, configuración, ubicación predeterminada y usuario OWNER. Correo existente produce 400. Devuelve JWT y perfil. No requiere autenticación.",
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operación completada (POST devuelve 201).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Registrar tienda y propietario",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/check-status": {
+      "get": {
+        "description": "Requiere usuario activo. Devuelve el perfil y un nuevo JWT de 24 horas. Roles permitidos: OWNER, MANAGER, CASHIER.",
+        "operationId": "AuthController_checkAuthStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Validar sesión y renovar token",
+        "tags": [
+          "auth"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER",
+          "CASHIER"
+        ]
+      }
+    },
+    "/api/products": {
+      "post": {
+        "description": "Crea un registro asociado a la tienda del usuario autenticado. Roles permitidos: OWNER, MANAGER.",
+        "operationId": "ProductsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operación completada (POST devuelve 201).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de unicidad: el valor ya existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear producto",
+        "tags": [
+          "products"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER"
+        ]
+      },
+      "get": {
+        "description": "Listado paginado por tienda. Busca por título o SKU; permite status y nombre exacto de category. Orden predeterminado createdAt desc. Roles permitidos: OWNER, MANAGER, CASHIER.",
+        "operationId": "ProductsController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página solicitada; enviar un entero positivo",
+            "schema": {
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Elementos por página; enviar un entero positivo",
+            "schema": {
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "default": 10,
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Texto de búsqueda, sin distinguir mayúsculas",
+            "schema": {
+              "example": "cafe",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo del modelo Prisma para ordenar; no usar nombres calculados de la respuesta",
+            "schema": {
+              "default": "createdAt",
+              "example": "createdAt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "direction",
+            "required": false,
+            "in": "query",
+            "description": "Dirección del orden",
+            "schema": {
+              "default": "desc",
+              "example": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Estado o rol permitido",
+            "schema": {
+              "$ref": "#/components/schemas/ProductStatus"
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "description": "Nombre exacto de categoría, sin distinguir mayúsculas; no es un UUID",
+            "schema": {
+              "example": "Bebidas",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar productos",
+        "tags": [
+          "products"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER",
+          "CASHIER"
+        ]
+      }
+    },
+    "/api/products/{id}": {
+      "get": {
+        "description": "Obtiene el registro identificado por UUID dentro de la tienda del usuario. Roles permitidos: OWNER, MANAGER, CASHIER.",
+        "operationId": "ProductsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar producto",
+        "tags": [
+          "products"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER",
+          "CASHIER"
+        ]
+      },
+      "patch": {
+        "description": "Actualización parcial: las propiedades omitidas conservan su valor. Roles permitidos: OWNER, MANAGER.",
+        "operationId": "ProductsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de unicidad: el valor ya existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar producto",
+        "tags": [
+          "products"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER"
+        ]
+      },
+      "delete": {
+        "description": "Elimina el registro y devuelve sus datos. Las relaciones existentes pueden impedir la eliminación. Roles permitidos: OWNER.",
+        "operationId": "ProductsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de unicidad: el valor ya existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar producto",
+        "tags": [
+          "products"
+        ],
+        "x-roles": [
+          "OWNER"
+        ]
+      }
+    },
+    "/api/categories": {
+      "post": {
+        "description": "Crea un registro asociado a la tienda del usuario autenticado. Roles permitidos: OWNER, MANAGER.",
+        "operationId": "CategoriesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operación completada (POST devuelve 201).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de unicidad: el valor ya existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear categoría",
+        "tags": [
+          "categories"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER"
+        ]
+      },
+      "get": {
+        "description": "Listado paginado por tienda. Busca por nombre. Orden predeterminado createdAt desc. Roles permitidos: OWNER, MANAGER, CASHIER.",
+        "operationId": "CategoriesController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página solicitada; enviar un entero positivo",
+            "schema": {
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Elementos por página; enviar un entero positivo",
+            "schema": {
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "default": 10,
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Texto de búsqueda, sin distinguir mayúsculas",
+            "schema": {
+              "example": "cafe",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo del modelo Prisma para ordenar; no usar nombres calculados de la respuesta",
+            "schema": {
+              "default": "createdAt",
+              "example": "createdAt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "direction",
+            "required": false,
+            "in": "query",
+            "description": "Dirección del orden",
+            "schema": {
+              "default": "desc",
+              "example": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar categorías",
+        "tags": [
+          "categories"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER",
+          "CASHIER"
+        ]
+      }
+    },
+    "/api/categories/{id}": {
+      "get": {
+        "description": "Obtiene el registro identificado por UUID dentro de la tienda del usuario. Roles permitidos: OWNER, MANAGER, CASHIER.",
+        "operationId": "CategoriesController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar categoría",
+        "tags": [
+          "categories"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER",
+          "CASHIER"
+        ]
+      },
+      "patch": {
+        "description": "Actualización parcial: las propiedades omitidas conservan su valor. Roles permitidos: OWNER, MANAGER.",
+        "operationId": "CategoriesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de unicidad: el valor ya existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar categoría",
+        "tags": [
+          "categories"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER"
+        ]
+      },
+      "delete": {
+        "description": "Elimina el registro y devuelve sus datos. Las relaciones existentes pueden impedir la eliminación. Devuelve también storeId y el nombre almacenado sin transformación. Roles permitidos: OWNER.",
+        "operationId": "CategoriesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedCategory"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de unicidad: el valor ya existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar categoría",
+        "tags": [
+          "categories"
+        ],
+        "x-roles": [
+          "OWNER"
+        ]
+      }
+    },
+    "/api/customers": {
+      "post": {
+        "description": "Crea un registro asociado a la tienda del usuario autenticado. Devuelve el registro persistido con storeId y updatedAt, sin agregados calculados. Roles permitidos: OWNER, MANAGER, CASHIER.",
+        "operationId": "CustomersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operación completada (POST devuelve 201).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerRecord"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de unicidad: el valor ya existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear cliente",
+        "tags": [
+          "customers"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER",
+          "CASHIER"
+        ]
+      },
+      "get": {
+        "description": "Listado paginado por tienda. Busca por nombre, apellido, teléfono o correo. Orden predeterminado createdAt desc. Incluye numberOfOrders, amountSpent (suma de totales de todos sus pedidos) y canDelete. Roles permitidos: OWNER, MANAGER, CASHIER.",
+        "operationId": "CustomersController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página solicitada; enviar un entero positivo",
+            "schema": {
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Elementos por página; enviar un entero positivo",
+            "schema": {
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "default": 10,
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Texto de búsqueda, sin distinguir mayúsculas",
+            "schema": {
+              "example": "cafe",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo del modelo Prisma para ordenar; no usar nombres calculados de la respuesta",
+            "schema": {
+              "default": "createdAt",
+              "example": "createdAt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "direction",
+            "required": false,
+            "in": "query",
+            "description": "Dirección del orden",
+            "schema": {
+              "default": "desc",
+              "example": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar clientes",
+        "tags": [
+          "customers"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER",
+          "CASHIER"
+        ]
+      }
+    },
+    "/api/customers/{id}": {
+      "get": {
+        "description": "Obtiene el registro identificado por UUID dentro de la tienda del usuario. Incluye numberOfOrders, amountSpent (suma de totales de todos sus pedidos) y canDelete. Roles permitidos: OWNER, MANAGER, CASHIER.",
+        "operationId": "CustomersController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar cliente",
+        "tags": [
+          "customers"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER",
+          "CASHIER"
+        ]
+      },
+      "patch": {
+        "description": "Actualización parcial: las propiedades omitidas conservan su valor. Devuelve el registro persistido con storeId y updatedAt, sin agregados calculados. Roles permitidos: OWNER, MANAGER, CASHIER.",
+        "operationId": "CustomersController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerRecord"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de unicidad: el valor ya existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar cliente",
+        "tags": [
+          "customers"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER",
+          "CASHIER"
+        ]
+      },
+      "delete": {
+        "description": "Elimina el registro y devuelve sus datos. Las relaciones existentes pueden impedir la eliminación. Devuelve el registro persistido con storeId y updatedAt, sin agregados calculados. Si tiene pedidos devuelve 403. Roles permitidos: OWNER, MANAGER.",
+        "operationId": "CustomersController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerRecord"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cliente con pedidos asociados: no se puede eliminar.\n\nRequiere uno de estos roles: OWNER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de unicidad: el valor ya existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar cliente",
+        "tags": [
+          "customers"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER"
+        ]
+      }
+    },
+    "/api/orders": {
+      "post": {
+        "description": "Crea un pedido OPEN/PENDING con numeración de tienda y precios actuales de productos. Descuenta inventario controlado; stock insuficiente o producto inexistente produce 400. Usa la ubicación activa predeterminada. Roles permitidos: OWNER, CASHIER, MANAGER.",
+        "operationId": "OrdersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operación completada (POST devuelve 201).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, CASHIER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de unicidad: el valor ya existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear pedido",
+        "tags": [
+          "orders"
+        ],
+        "x-roles": [
+          "OWNER",
+          "CASHIER",
+          "MANAGER"
+        ]
+      },
+      "get": {
+        "description": "Busca por nombre del pedido y nombre, apellido, correo o teléfono del cliente. Filtra por status. startDate y endDate se validan pero actualmente NO se aplican al listado. Orden predeterminado createdAt desc. Roles permitidos: OWNER, CASHIER, MANAGER.",
+        "operationId": "OrdersController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página solicitada; enviar un entero positivo",
+            "schema": {
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Elementos por página; enviar un entero positivo",
+            "schema": {
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "default": 10,
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Texto de búsqueda, sin distinguir mayúsculas",
+            "schema": {
+              "example": "cafe",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo del modelo Prisma para ordenar; no usar nombres calculados de la respuesta",
+            "schema": {
+              "default": "createdAt",
+              "example": "createdAt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "direction",
+            "required": false,
+            "in": "query",
+            "description": "Dirección del orden",
+            "schema": {
+              "default": "desc",
+              "example": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Estado o rol permitido",
+            "schema": {
+              "$ref": "#/components/schemas/OrderStatus"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "description": "Aceptado y validado, pero actualmente no se aplica al listado. Usar /orders/stats para filtrar estadísticas por fecha.",
+            "schema": {
+              "example": "2026-09-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "description": "Aceptado y validado, pero actualmente no se aplica al listado. Usar /orders/stats para filtrar estadísticas por fecha.",
+            "schema": {
+              "example": "2026-09-27",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, CASHIER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar pedidos",
+        "tags": [
+          "orders"
+        ],
+        "x-roles": [
+          "OWNER",
+          "CASHIER",
+          "MANAGER"
+        ]
+      }
+    },
+    "/api/orders/stats": {
+      "get": {
+        "description": "Filtra por fecha de creación e incluye los extremos del día según la zona horaria del servidor. Sin fechas usa el día actual; con un solo extremo queda abierto el otro. orders, sales e items excluyen cancelados; cancelledOrders los cuenta aparte. sales suma totales de pedidos, no pagos cobrados. Roles permitidos: OWNER, CASHIER, MANAGER.",
+        "operationId": "OrdersController_getOrderStats",
+        "parameters": [
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "description": "Inicio inclusivo por fecha de creación, normalizado al inicio del día del servidor",
+            "schema": {
+              "example": "2026-09-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "description": "Fin inclusivo por fecha de creación, normalizado al final del día del servidor",
+            "schema": {
+              "example": "2026-09-27",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderStats"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, CASHIER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar estadísticas de pedidos",
+        "tags": [
+          "orders"
+        ],
+        "x-roles": [
+          "OWNER",
+          "CASHIER",
+          "MANAGER"
+        ]
+      }
+    },
+    "/api/orders/{id}": {
+      "get": {
+        "description": "Obtiene el registro identificado por UUID dentro de la tienda del usuario. Roles permitidos: OWNER, CASHIER, MANAGER.",
+        "operationId": "OrdersController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, CASHIER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar pedido",
+        "tags": [
+          "orders"
+        ],
+        "x-roles": [
+          "OWNER",
+          "CASHIER",
+          "MANAGER"
+        ]
+      },
+      "patch": {
+        "description": "Actualiza customerId, email, phone y note. items es aceptado y validado, pero ignorado: use las rutas de artículos. No comprueba el estado del pedido. Roles permitidos: OWNER, CASHIER, MANAGER.",
+        "operationId": "OrdersController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, CASHIER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de unicidad: el valor ya existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar datos del pedido",
+        "tags": [
+          "orders"
+        ],
+        "x-roles": [
+          "OWNER",
+          "CASHIER",
+          "MANAGER"
+        ]
+      }
+    },
+    "/api/orders/{id}/items": {
+      "post": {
+        "description": "Requiere pedido OPEN. Agrega una línea con cantidad 1 por cada productId, descuenta inventario controlado y recalcula totales. No fusiona líneas existentes. Roles permitidos: OWNER, CASHIER, MANAGER.",
+        "operationId": "OrdersController_addItems",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddItemsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operación completada (POST devuelve 201).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, CASHIER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Agregar artículos",
+        "tags": [
+          "orders"
+        ],
+        "x-roles": [
+          "OWNER",
+          "CASHIER",
+          "MANAGER"
+        ]
+      }
+    },
+    "/api/orders/{id}/items/{itemId}": {
+      "patch": {
+        "description": "Requiere pedido OPEN. quantity es la nueva cantidad absoluta; cero retira el artículo de la respuesta. Aumentar descuenta stock; reducir solo repone si restock=true (predeterminado false). Recalcula totales. Un itemId inexistente puede producir 500 por Prisma no interceptado. Roles permitidos: OWNER, CASHIER, MANAGER.",
+        "operationId": "OrdersController_editItemQuantity",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "itemId",
+            "required": true,
+            "in": "path",
+            "description": "UUID del artículo dentro del pedido.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditItemQuantityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, CASHIER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar cantidad de un artículo",
+        "tags": [
+          "orders"
+        ],
+        "x-roles": [
+          "OWNER",
+          "CASHIER",
+          "MANAGER"
+        ]
+      }
+    },
+    "/api/orders/{id}/open": {
+      "post": {
+        "description": "Solo admite pedidos CLOSED cuyo estado financiero no sea VOIDED. Cambia a OPEN y elimina closedAt. Roles permitidos: OWNER, CASHIER, MANAGER.",
+        "operationId": "OrdersController_open",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Operación completada (POST devuelve 201).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, CASHIER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reabrir pedido",
+        "tags": [
+          "orders"
+        ],
+        "x-roles": [
+          "OWNER",
+          "CASHIER",
+          "MANAGER"
+        ]
+      }
+    },
+    "/api/orders/{id}/close": {
+      "post": {
+        "description": "Requiere OPEN y estado financiero distinto de PENDING y PARTIALLY_PAID. Cambia a CLOSED y fija closedAt. Roles permitidos: OWNER, CASHIER, MANAGER.",
+        "operationId": "OrdersController_close",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Operación completada (POST devuelve 201).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, CASHIER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de unicidad: el valor ya existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cerrar pedido",
+        "tags": [
+          "orders"
+        ],
+        "x-roles": [
+          "OWNER",
+          "CASHIER",
+          "MANAGER"
+        ]
+      }
+    },
+    "/api/orders/{id}/cancel": {
+      "post": {
+        "description": "Rechaza CLOSED; si ya está CANCELLED devuelve el pedido sin repetir efectos. Marca CANCELLED/VOIDED y registra motivo y fecha. Actualmente siempre repone inventario controlado aunque restock=false. No crea reembolsos. Roles permitidos: OWNER, CASHIER, MANAGER.",
+        "operationId": "OrdersController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operación completada (POST devuelve 201).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, CASHIER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado en la tienda del usuario o registro relacionado inexistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancelar pedido",
+        "tags": [
+          "orders"
+        ],
+        "x-roles": [
+          "OWNER",
+          "CASHIER",
+          "MANAGER"
+        ]
+      }
+    },
+    "/api/orders/{id}/payment": {
+      "post": {
+        "description": "Requiere pedido abierto y no totalmente pagado. Crea pago y recalcula estado financiero (PARTIALLY_PAID o PAID). Admite un importe superior al saldo; no genera cambio ni reembolso. Devuelve el pago, no el pedido. Pedido inexistente puede producir 500 por Prisma no interceptado. Roles permitidos: OWNER, CASHIER, MANAGER.",
+        "operationId": "OrdersController_addPayment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePaymentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operación completada (POST devuelve 201).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Payment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, CASHIER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Registrar pago",
+        "tags": [
+          "orders"
+        ],
+        "x-roles": [
+          "OWNER",
+          "CASHIER",
+          "MANAGER"
+        ]
+      }
+    },
+    "/api/users/me": {
+      "get": {
+        "description": "Devuelve el perfil del personal autenticado, sin storeName ni contraseña. Roles permitidos: OWNER, MANAGER, CASHIER.",
+        "operationId": "UsersController_getMyDataUser",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffUser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar mi perfil",
+        "tags": [
+          "users"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER",
+          "CASHIER"
+        ]
+      },
+      "patch": {
+        "description": "Actualiza firstName, lastName, email, phone y role. El DTO actual también acepta password, pero el servicio lo ignora; use me/password. Actualmente también permite enviar role en esta ruta. Roles permitidos: OWNER, MANAGER, CASHIER.",
+        "operationId": "UsersController_updateMyData",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffUser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar mi perfil",
+        "tags": [
+          "users"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER",
+          "CASHIER"
+        ]
+      }
+    },
+    "/api/users/me/password": {
+      "patch": {
+        "description": "Comprueba la contraseña actual y exige una nueva diferente de al menos seis caracteres. Devuelve el perfil del personal. Roles permitidos: OWNER, MANAGER, CASHIER.",
+        "operationId": "UsersController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffUser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cambiar mi contraseña",
+        "tags": [
+          "users"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER",
+          "CASHIER"
+        ]
+      }
+    },
+    "/api/users": {
+      "post": {
+        "description": "Crea un registro asociado a la tienda del usuario autenticado. Roles permitidos: OWNER, MANAGER.",
+        "operationId": "UsersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operación completada (POST devuelve 201).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffUser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Crear usuario",
+        "tags": [
+          "users"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER"
+        ]
+      },
+      "get": {
+        "description": "Listado paginado por tienda. Busca por nombre, apellido, correo o teléfono. Orden predeterminado createdAt desc. Roles permitidos: OWNER, MANAGER.",
+        "operationId": "UsersController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Página solicitada; enviar un entero positivo",
+            "schema": {
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Elementos por página; enviar un entero positivo",
+            "schema": {
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "default": 10,
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Texto de búsqueda, sin distinguir mayúsculas",
+            "schema": {
+              "example": "cafe",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Campo del modelo Prisma para ordenar; no usar nombres calculados de la respuesta",
+            "schema": {
+              "default": "createdAt",
+              "example": "createdAt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "direction",
+            "required": false,
+            "in": "query",
+            "description": "Dirección del orden",
+            "schema": {
+              "default": "desc",
+              "example": "desc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffUserPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Listar usuarios",
+        "tags": [
+          "users"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER"
+        ]
+      }
+    },
+    "/api/users/{id}": {
+      "get": {
+        "description": "Obtiene el registro identificado por UUID dentro de la tienda del usuario. Usuario inexistente devuelve 400. Roles permitidos: OWNER, MANAGER.",
+        "operationId": "UsersController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffUser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Consultar usuario",
+        "tags": [
+          "users"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER"
+        ]
+      },
+      "patch": {
+        "description": "Actualiza datos y rol. password es aceptado por el DTO pero ignorado por este servicio. Roles permitidos: OWNER, MANAGER.",
+        "operationId": "UsersController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffUser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER, MANAGER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de unicidad: el valor ya existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Actualizar usuario",
+        "tags": [
+          "users"
+        ],
+        "x-roles": [
+          "OWNER",
+          "MANAGER"
+        ]
+      },
+      "delete": {
+        "description": "Elimina el registro y devuelve sus datos. Las relaciones existentes pueden impedir la eliminación. Roles permitidos: OWNER.",
+        "operationId": "UsersController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffUser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de unicidad: el valor ya existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Eliminar usuario",
+        "tags": [
+          "users"
+        ],
+        "x-roles": [
+          "OWNER"
+        ]
+      }
+    },
+    "/api/users/{id}/status": {
+      "patch": {
+        "description": "Invierte isActive; no recibe cuerpo. No fija un estado explícito. Roles permitidos: OWNER.",
+        "operationId": "UsersController_changeActiveStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID del recurso en la tienda del usuario.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffUser"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, propiedades no permitidas o regla de negocio incumplida. En usuarios, también se usa cuando el usuario no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT ausente, inválido o vencido; usuario inexistente o inactivo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requiere uno de estos roles: OWNER.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno o de base de datos. Algunos errores Prisma no interceptados se devuelven con este estado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Alternar estado activo",
+        "tags": [
+          "users"
+        ],
+        "x-roles": [
+          "OWNER"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "La Hermandad — API POS",
+    "description": "API del punto de venta: autenticación, usuarios, categorías, productos, clientes y pedidos con pagos. Las rutas protegidas obtienen la tienda desde el usuario autenticado. Use login o register y pegue el token en Authorize. Los JWT duran 24 horas. Los cuerpos rechazan propiedades desconocidas. Los importes de entrada son números y los Decimal de salida son cadenas. Todos los POST devuelven 201; PATCH y DELETE devuelven 200 con cuerpo. Los permisos se indican mediante x-roles en cada operación.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "auth",
+      "description": "Registro de tienda y propietario, inicio de sesión y renovación del token."
+    },
+    {
+      "name": "users",
+      "description": "Perfil, contraseña y administración del personal de la tienda."
+    },
+    {
+      "name": "categories",
+      "description": "Clasificación del catálogo."
+    },
+    {
+      "name": "products",
+      "description": "Catálogo, precios y existencias."
+    },
+    {
+      "name": "customers",
+      "description": "Clientes e información agregada de sus pedidos."
+    },
+    {
+      "name": "orders",
+      "description": "Pedidos, artículos, estados, estadísticas y pagos."
+    }
+  ],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "Pegue únicamente el token obtenido en auth/login o auth/register."
+      }
+    },
+    "schemas": {
+      "LoginUserDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Correo electrónico",
+            "example": "alvaro@example.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "Contraseña de acceso",
+            "example": "Ejemplo123!",
+            "format": "password",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "RegisterUserDto": {
+        "type": "object",
+        "properties": {
+          "storeName": {
+            "type": "string",
+            "description": "Nombre comercial de la tienda",
+            "example": "La Hermandad",
+            "minLength": 3
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Nombre del usuario o cliente",
+            "example": "Álvaro",
+            "minLength": 3
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Apellidos",
+            "example": "Pérez",
+            "minLength": 3
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo electrónico",
+            "example": "alvaro@example.com",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "description": "Contraseña de acceso",
+            "example": "Ejemplo123!",
+            "format": "password",
+            "writeOnly": true,
+            "minLength": 6
+          }
+        },
+        "required": [
+          "storeName",
+          "firstName",
+          "email",
+          "password"
+        ]
+      },
+      "ProductStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "ACTIVE",
+          "ARCHIVED"
+        ],
+        "description": "Estado o rol permitido"
+      },
+      "CreateProductDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Nombre del producto",
+            "example": "Café",
+            "minLength": 3
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción",
+            "example": "Descripción de ejemplo"
+          },
+          "sku": {
+            "type": "string",
+            "description": "Código SKU, único por tienda",
+            "example": "CAF-001"
+          },
+          "price": {
+            "type": "number",
+            "description": "Precio de venta",
+            "example": 25.5,
+            "minimum": 0
+          },
+          "costPrice": {
+            "type": "number",
+            "description": "Costo del producto",
+            "example": 15,
+            "minimum": 0
+          },
+          "compareAtPrice": {
+            "type": "number",
+            "description": "Precio de comparación",
+            "example": 30,
+            "minimum": 0
+          },
+          "trackInventory": {
+            "type": "boolean",
+            "description": "Controlar existencias",
+            "example": true
+          },
+          "inventoryQuantity": {
+            "type": "number",
+            "description": "Existencias del producto; enviar un entero",
+            "example": 20,
+            "minimum": 0
+          },
+          "status": {
+            "description": "Estado o rol permitido",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductStatus"
+              }
+            ]
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Identificador UUID del recurso",
+            "example": "123e4567-e89b-42d3-a456-426614174000",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "title",
+          "price"
+        ]
+      },
+      "UpdateProductDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Nombre del producto",
+            "example": "Café",
+            "minLength": 3
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción",
+            "example": "Descripción de ejemplo"
+          },
+          "sku": {
+            "type": "string",
+            "description": "Código SKU, único por tienda",
+            "example": "CAF-001"
+          },
+          "price": {
+            "type": "number",
+            "description": "Precio de venta",
+            "example": 25.5,
+            "minimum": 0
+          },
+          "costPrice": {
+            "type": "number",
+            "description": "Costo del producto",
+            "example": 15,
+            "minimum": 0
+          },
+          "compareAtPrice": {
+            "type": "number",
+            "description": "Precio de comparación",
+            "example": 30,
+            "minimum": 0
+          },
+          "trackInventory": {
+            "type": "boolean",
+            "description": "Controlar existencias",
+            "example": true
+          },
+          "inventoryQuantity": {
+            "type": "number",
+            "description": "Existencias del producto; enviar un entero",
+            "example": 20,
+            "minimum": 0
+          },
+          "status": {
+            "description": "Estado o rol permitido",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProductStatus"
+              }
+            ]
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Identificador UUID del recurso",
+            "example": "123e4567-e89b-42d3-a456-426614174000",
+            "format": "uuid"
+          }
+        }
+      },
+      "CreateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre de la categoría",
+            "example": "Bebidas",
+            "minLength": 3
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción",
+            "example": "Descripción de ejemplo"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre de la categoría",
+            "example": "Bebidas",
+            "minLength": 3
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción",
+            "example": "Descripción de ejemplo"
+          }
+        }
+      },
+      "CreateCustomerDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "description": "Nombre del usuario o cliente",
+            "example": "Álvaro",
+            "minLength": 3
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Apellidos",
+            "example": "Pérez",
+            "minLength": 3
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo electrónico",
+            "example": "alvaro@example.com",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono en formato internacional",
+            "example": "+59171234567"
+          },
+          "note": {
+            "type": "string",
+            "description": "Nota interna",
+            "example": "Atender por la tarde"
+          }
+        },
+        "required": [
+          "firstName"
+        ]
+      },
+      "UpdateCustomerDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "description": "Nombre del usuario o cliente",
+            "example": "Álvaro",
+            "minLength": 3
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Apellidos",
+            "example": "Pérez",
+            "minLength": 3
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo electrónico",
+            "example": "alvaro@example.com",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono en formato internacional",
+            "example": "+59171234567"
+          },
+          "note": {
+            "type": "string",
+            "description": "Nota interna",
+            "example": "Atender por la tarde"
+          }
+        }
+      },
+      "OrderItemDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "description": "Identificador UUID del recurso",
+            "example": "123e4567-e89b-42d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Cantidad de unidades; enviar un entero",
+            "example": 1,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "productId",
+          "quantity"
+        ]
+      },
+      "CreateOrderDto": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Identificador UUID del recurso",
+            "example": "123e4567-e89b-42d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo electrónico",
+            "example": "alvaro@example.com",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono en formato internacional",
+            "example": "+59171234567"
+          },
+          "note": {
+            "type": "string",
+            "description": "Nota interna",
+            "example": "Atender por la tarde"
+          },
+          "items": {
+            "description": "Artículos del pedido",
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "OrderStatus": {
+        "type": "string",
+        "enum": [
+          "OPEN",
+          "CLOSED",
+          "CANCELLED"
+        ]
+      },
+      "UpdateOrderDto": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "description": "Identificador UUID del recurso",
+            "example": "123e4567-e89b-42d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo electrónico",
+            "example": "alvaro@example.com",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono en formato internacional",
+            "example": "+59171234567"
+          },
+          "note": {
+            "type": "string",
+            "description": "Nota interna",
+            "example": "Atender por la tarde"
+          },
+          "items": {
+            "description": "Artículos del pedido",
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemDto"
+            }
+          }
+        }
+      },
+      "AddItemsDto": {
+        "type": "object",
+        "properties": {
+          "productIds": {
+            "description": "Productos a agregar, cada uno con cantidad 1",
+            "example": [
+              "123e4567-e89b-42d3-a456-426614174000"
+            ],
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "productIds"
+        ]
+      },
+      "EditItemQuantityDto": {
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "type": "number",
+            "description": "Cantidad de unidades; enviar un entero",
+            "example": 1,
+            "minimum": 0
+          },
+          "restock": {
+            "type": "boolean",
+            "description": "Reponer inventario al reducir la cantidad",
+            "example": false,
+            "default": false
+          }
+        },
+        "required": [
+          "quantity"
+        ]
+      },
+      "CancelOrderDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Motivo de cancelación",
+            "example": "Solicitud del cliente"
+          },
+          "restock": {
+            "type": "boolean",
+            "description": "Actualmente ignorado: la cancelación siempre repone existencias de productos con control de inventario.",
+            "example": true,
+            "default": true
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "PaymentMethod": {
+        "type": "string",
+        "enum": [
+          "CASH",
+          "CARD",
+          "QR",
+          "BANK_TRANSFER"
+        ],
+        "description": "Estado o rol permitido"
+      },
+      "CreatePaymentDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "Importe del pago, mínimo 0.01 y máximo dos decimales",
+            "example": 25.5,
+            "minimum": 0.01
+          },
+          "method": {
+            "description": "Estado o rol permitido",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentMethod"
+              }
+            ]
+          },
+          "reference": {
+            "type": "string",
+            "description": "Referencia del pago",
+            "example": "REC-001"
+          },
+          "note": {
+            "type": "string",
+            "description": "Nota interna",
+            "example": "Atender por la tarde"
+          }
+        },
+        "required": [
+          "amount",
+          "method"
+        ]
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "OWNER",
+          "MANAGER",
+          "CASHIER"
+        ],
+        "description": "Estado o rol permitido"
+      },
+      "UpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "description": "Nombre del usuario o cliente",
+            "example": "Álvaro",
+            "minLength": 3
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Apellidos",
+            "example": "Pérez",
+            "minLength": 3
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo electrónico",
+            "example": "alvaro@example.com",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono en formato internacional",
+            "example": "+59171234567"
+          },
+          "password": {
+            "type": "string",
+            "description": "Contraseña de acceso",
+            "example": "Ejemplo123!",
+            "format": "password",
+            "writeOnly": true,
+            "minLength": 6
+          },
+          "role": {
+            "description": "Estado o rol permitido",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Role"
+              }
+            ]
+          }
+        }
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "description": "Contraseña actual",
+            "example": "Ejemplo123!",
+            "format": "password",
+            "writeOnly": true
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "Nueva contraseña, distinta de la actual",
+            "example": "Nueva123!",
+            "format": "password",
+            "writeOnly": true,
+            "minLength": 6
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "description": "Nombre del usuario o cliente",
+            "example": "Álvaro",
+            "minLength": 3
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Apellidos",
+            "example": "Pérez",
+            "minLength": 3
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo electrónico",
+            "example": "alvaro@example.com",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono en formato internacional",
+            "example": "+59171234567"
+          },
+          "password": {
+            "type": "string",
+            "description": "Contraseña de acceso",
+            "example": "Ejemplo123!",
+            "format": "password",
+            "writeOnly": true,
+            "minLength": 6
+          },
+          "role": {
+            "description": "Estado o rol permitido",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Role"
+              }
+            ]
+          }
+        },
+        "required": [
+          "firstName",
+          "email",
+          "password",
+          "role"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "statusCode",
+          "message"
+        ],
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 400
+          },
+          "message": {
+            "description": "Mensaje del servicio o lista de errores de validación.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "example": [
+              "property unknown should not exist"
+            ]
+          },
+          "error": {
+            "type": "string",
+            "description": "Nombre HTTP del error, cuando Nest lo incluye",
+            "example": "Bad Request"
+          }
+        }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "required": [
+          "totalItems",
+          "currentPage",
+          "pageSize",
+          "totalPages",
+          "hasNextPage",
+          "hasPreviousPage"
+        ],
+        "properties": {
+          "totalItems": {
+            "type": "integer",
+            "example": 1
+          },
+          "currentPage": {
+            "type": "integer",
+            "example": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "example": 10
+          },
+          "totalPages": {
+            "type": "integer",
+            "example": 1
+          },
+          "hasNextPage": {
+            "type": "boolean",
+            "example": true
+          },
+          "hasPreviousPage": {
+            "type": "boolean",
+            "example": false
+          }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-42d3-a456-426614174000"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de categoría",
+            "example": "Bebidas"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción",
+            "example": "Ejemplo",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z"
+          }
+        }
+      },
+      "DeletedCategory": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "createdAt",
+          "updatedAt",
+          "storeId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-42d3-a456-426614174000"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre de categoría",
+            "example": "Bebidas"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción",
+            "example": "Ejemplo",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z"
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-42d3-a456-426614174000"
+          }
+        }
+      },
+      "CustomerRecord": {
+        "type": "object",
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email",
+          "phone",
+          "createdAt",
+          "storeId",
+          "note",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-42d3-a456-426614174000"
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Nombre",
+            "example": "Álvaro"
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Apellidos",
+            "example": "Pérez",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "alvaro@example.com",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono internacional",
+            "example": "+59171234567",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z"
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-42d3-a456-426614174000"
+          },
+          "note": {
+            "type": "string",
+            "description": "Nota",
+            "example": "Ejemplo",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z"
+          }
+        }
+      },
+      "Customer": {
+        "type": "object",
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email",
+          "phone",
+          "createdAt",
+          "displayName",
+          "note",
+          "amountSpent",
+          "numberOfOrders",
+          "canDelete"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-42d3-a456-426614174000"
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Nombre",
+            "example": "Álvaro"
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Apellidos",
+            "example": "Pérez",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "alvaro@example.com",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono internacional",
+            "example": "+59171234567",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Nombre completo",
+            "example": "Álvaro Pérez"
+          },
+          "note": {
+            "type": "string",
+            "description": "Nota",
+            "example": "Ejemplo",
+            "nullable": true
+          },
+          "amountSpent": {
+            "type": "string",
+            "description": "Decimal de Prisma serializado como cadena JSON; no garantiza ceros finales.",
+            "example": "25.5"
+          },
+          "numberOfOrders": {
+            "type": "integer",
+            "example": 1
+          },
+          "canDelete": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "StaffUser": {
+        "type": "object",
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email",
+          "phone",
+          "createdAt",
+          "name",
+          "initials",
+          "avatar",
+          "isShopOwner",
+          "isActive",
+          "role"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-42d3-a456-426614174000"
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Nombre",
+            "example": "Álvaro"
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Apellidos",
+            "example": "Pérez",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "alvaro@example.com",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono internacional",
+            "example": "+59171234567",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre completo",
+            "example": "Álvaro Pérez"
+          },
+          "initials": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "Á",
+              "P"
+            ]
+          },
+          "avatar": {
+            "type": "string",
+            "description": "URL de avatar",
+            "example": "Ejemplo",
+            "nullable": true
+          },
+          "isShopOwner": {
+            "type": "boolean",
+            "example": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "MANAGER",
+              "CASHIER"
+            ],
+            "example": "OWNER"
+          }
+        }
+      },
+      "AuthUser": {
+        "type": "object",
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email",
+          "phone",
+          "createdAt",
+          "name",
+          "initials",
+          "avatar",
+          "isShopOwner",
+          "isActive",
+          "role",
+          "storeName"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-42d3-a456-426614174000"
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Nombre",
+            "example": "Álvaro"
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Apellidos",
+            "example": "Pérez",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "alvaro@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono internacional",
+            "example": "+59171234567",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre completo",
+            "example": "Álvaro Pérez"
+          },
+          "initials": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "Á",
+              "P"
+            ]
+          },
+          "avatar": {
+            "type": "string",
+            "description": "URL de avatar",
+            "example": "Ejemplo",
+            "nullable": true
+          },
+          "isShopOwner": {
+            "type": "boolean",
+            "example": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "MANAGER",
+              "CASHIER"
+            ],
+            "example": "OWNER"
+          },
+          "storeName": {
+            "type": "string",
+            "description": "Nombre de la tienda",
+            "example": "La Hermandad"
+          }
+        }
+      },
+      "AuthSession": {
+        "type": "object",
+        "required": [
+          "token",
+          "user"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "JWT con vigencia de 24 horas",
+            "example": "eyJhbGciOiJIUzI1NiJ9..."
+          },
+          "user": {
+            "$ref": "#/components/schemas/AuthUser"
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "sku",
+          "price",
+          "costPrice",
+          "compareAtPrice",
+          "trackInventory",
+          "inventoryQuantity",
+          "status",
+          "category",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-42d3-a456-426614174000"
+          },
+          "title": {
+            "type": "string",
+            "description": "Nombre del producto",
+            "example": "Café"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción",
+            "example": "Ejemplo",
+            "nullable": true
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU",
+            "example": "CAF-001",
+            "nullable": true
+          },
+          "price": {
+            "type": "string",
+            "description": "Decimal de Prisma serializado como cadena JSON; no garantiza ceros finales.",
+            "example": "25.5"
+          },
+          "costPrice": {
+            "type": "string",
+            "description": "Decimal de Prisma serializado como cadena JSON; no garantiza ceros finales.",
+            "example": "25.5",
+            "nullable": true
+          },
+          "compareAtPrice": {
+            "type": "string",
+            "description": "Decimal de Prisma serializado como cadena JSON; no garantiza ceros finales.",
+            "example": "25.5",
+            "nullable": true
+          },
+          "trackInventory": {
+            "type": "boolean",
+            "example": true
+          },
+          "inventoryQuantity": {
+            "type": "integer",
+            "example": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "ACTIVE",
+              "ARCHIVED"
+            ],
+            "example": "DRAFT"
+          },
+          "category": {
+            "type": "object",
+            "required": [
+              "id",
+              "name"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "example": "123e4567-e89b-42d3-a456-426614174000"
+              },
+              "name": {
+                "type": "string",
+                "description": "Categoría",
+                "example": "Bebidas"
+              }
+            },
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z"
+          }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "productId",
+          "title",
+          "quantity",
+          "unitPrice",
+          "totalPrice",
+          "sku"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-42d3-a456-426614174000"
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-42d3-a456-426614174000"
+          },
+          "title": {
+            "type": "string",
+            "description": "Nombre al momento de la venta",
+            "example": "Café"
+          },
+          "quantity": {
+            "type": "integer",
+            "example": 1
+          },
+          "unitPrice": {
+            "type": "string",
+            "description": "Decimal de Prisma serializado como cadena JSON; no garantiza ceros finales.",
+            "example": "25.5"
+          },
+          "totalPrice": {
+            "type": "string",
+            "description": "Decimal de Prisma serializado como cadena JSON; no garantiza ceros finales.",
+            "example": "25.5"
+          },
+          "sku": {
+            "type": "string",
+            "description": "SKU",
+            "example": "CAF-001",
+            "nullable": true
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "name",
+          "itemCount",
+          "subtotalPrice",
+          "totalPrice",
+          "email",
+          "phone",
+          "note",
+          "customer",
+          "financialStatus",
+          "status",
+          "cancelledAt",
+          "cancelReason",
+          "closedAt",
+          "paidAt",
+          "createdAt",
+          "updateAt",
+          "items"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-42d3-a456-426614174000"
+          },
+          "number": {
+            "type": "integer",
+            "example": 1001
+          },
+          "name": {
+            "type": "string",
+            "description": "Número con prefijo y sufijo",
+            "example": "#1001"
+          },
+          "itemCount": {
+            "type": "integer",
+            "example": 1
+          },
+          "subtotalPrice": {
+            "type": "string",
+            "description": "Decimal de Prisma serializado como cadena JSON; no garantiza ceros finales.",
+            "example": "25.5"
+          },
+          "totalPrice": {
+            "type": "string",
+            "description": "Decimal de Prisma serializado como cadena JSON; no garantiza ceros finales.",
+            "example": "25.5"
+          },
+          "email": {
+            "type": "string",
+            "description": "Correo electrónico",
+            "example": "alvaro@example.com",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "description": "Teléfono",
+            "example": "+59171234567",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "description": "Nota",
+            "example": "Ejemplo",
+            "nullable": true
+          },
+          "customer": {
+            "type": "object",
+            "required": [
+              "id",
+              "firstName",
+              "lastName",
+              "email",
+              "phone",
+              "createdAt",
+              "storeId",
+              "note",
+              "updatedAt"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "example": "123e4567-e89b-42d3-a456-426614174000"
+              },
+              "firstName": {
+                "type": "string",
+                "description": "Nombre",
+                "example": "Álvaro"
+              },
+              "lastName": {
+                "type": "string",
+                "description": "Apellidos",
+                "example": "Pérez",
+                "nullable": true
+              },
+              "email": {
+                "type": "string",
+                "format": "email",
+                "example": "alvaro@example.com",
+                "nullable": true
+              },
+              "phone": {
+                "type": "string",
+                "description": "Teléfono internacional",
+                "example": "+59171234567",
+                "nullable": true
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-09-27T12:00:00.000Z"
+              },
+              "storeId": {
+                "type": "string",
+                "format": "uuid",
+                "example": "123e4567-e89b-42d3-a456-426614174000"
+              },
+              "note": {
+                "type": "string",
+                "description": "Nota",
+                "example": "Ejemplo",
+                "nullable": true
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-09-27T12:00:00.000Z"
+              }
+            },
+            "nullable": true
+          },
+          "financialStatus": {
+            "type": "string",
+            "enum": [
+              "PAID",
+              "PARTIALLY_PAID",
+              "PENDING",
+              "REFUNDED",
+              "PARTIALLY_REFUNDED",
+              "VOIDED"
+            ],
+            "example": "PAID"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "CLOSED",
+              "CANCELLED"
+            ],
+            "example": "OPEN"
+          },
+          "cancelledAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z",
+            "nullable": true
+          },
+          "cancelReason": {
+            "type": "string",
+            "description": "Motivo de cancelación",
+            "example": "Ejemplo",
+            "nullable": true
+          },
+          "closedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z",
+            "nullable": true
+          },
+          "paidAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z"
+          },
+          "updateAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z",
+            "description": "Nombre actual del campo: updateAt (sin d)."
+          },
+          "items": {
+            "type": "array",
+            "description": "Solo artículos con cantidad mayor que cero.",
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            }
+          }
+        }
+      },
+      "Payment": {
+        "type": "object",
+        "required": [
+          "id",
+          "orderId",
+          "amount",
+          "method",
+          "reference",
+          "note",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-42d3-a456-426614174000"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-42d3-a456-426614174000"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Decimal de Prisma serializado como cadena JSON; no garantiza ceros finales.",
+            "example": "25.5"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "CASH",
+              "CARD",
+              "QR",
+              "BANK_TRANSFER"
+            ],
+            "example": "CASH"
+          },
+          "reference": {
+            "type": "string",
+            "description": "Referencia",
+            "example": "REC-001",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "description": "Nota",
+            "example": "Ejemplo",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-27T12:00:00.000Z"
+          }
+        }
+      },
+      "OrderStats": {
+        "type": "object",
+        "required": [
+          "orders",
+          "sales",
+          "items",
+          "closedOrders",
+          "cancelledOrders"
+        ],
+        "properties": {
+          "orders": {
+            "type": "integer",
+            "example": 1
+          },
+          "sales": {
+            "type": "string",
+            "description": "Decimal de Prisma serializado como cadena JSON; no garantiza ceros finales.",
+            "example": "25.5"
+          },
+          "items": {
+            "type": "integer",
+            "example": 1
+          },
+          "closedOrders": {
+            "type": "integer",
+            "example": 1
+          },
+          "cancelledOrders": {
+            "type": "integer",
+            "example": 1
+          }
+        }
+      },
+      "CategoryPage": {
+        "type": "object",
+        "required": [
+          "meta",
+          "results"
+        ],
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Category"
+            }
+          }
+        }
+      },
+      "CustomerPage": {
+        "type": "object",
+        "required": [
+          "meta",
+          "results"
+        ],
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Customer"
+            }
+          }
+        }
+      },
+      "ProductPage": {
+        "type": "object",
+        "required": [
+          "meta",
+          "results"
+        ],
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            }
+          }
+        }
+      },
+      "StaffUserPage": {
+        "type": "object",
+        "required": [
+          "meta",
+          "results"
+        ],
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StaffUser"
+            }
+          }
+        }
+      },
+      "OrderPage": {
+        "type": "object",
+        "required": [
+          "meta",
+          "results"
+        ],
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          }
+        }
+      }
+    }
+  }
+}
