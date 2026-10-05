@@ -62,7 +62,7 @@ export class OrdersController {
   }
 
   @Get('stats')
-  @Auth('OWNER', 'CASHIER', 'MANAGER')
+  @Auth('OWNER')
   @ApiEndpoint(
     'Consultar estadísticas de pedidos',
     'Filtra por fecha de creación e incluye los extremos del día según la zona horaria del servidor. Sin fechas usa el día actual; con un solo extremo queda abierto el otro. orders, sales e items excluyen cancelados; cancelledOrders los cuenta aparte. sales suma totales de pedidos, no pagos cobrados. Roles permitidos: OWNER, CASHIER, MANAGER.',

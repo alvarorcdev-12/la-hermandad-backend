@@ -25,7 +25,6 @@ import { OrdersMapper } from './mapper/orders.mapper.js';
 
 import type {
   FinancialStatus,
-  Order,
   Product,
   User,
 } from '../generated/prisma/client.js';
@@ -34,7 +33,7 @@ import type {
   OrderOrderByWithRelationInput,
   OrderWhereInput,
 } from '../generated/prisma/models.js';
-import type { TransactionClient } from '../generated/prisma/internal/prismaNamespace.js';
+
 import { OrderStatsDto } from './dto/order-stats.dto.js';
 
 @Injectable()
@@ -768,56 +767,89 @@ export class OrdersService {
   }
 
   // Payments
-  addPayment(id: string, storeId: string, createPaymentDto: CreatePaymentDto) {
+  async addPayment(
+    id: string,
+    storeId: string,
+    createPaymentDto: CreatePaymentDto,
+  ) {
     return this.prismaService.$transaction(async (tx) => {
-      // 1. Obtener order
+      // 1. Obtener la orden
       const order = await tx.order.findFirstOrThrow({
-        where: {
-          id: id,
-          storeId: storeId,
-        },
+        where: { id, storeId },
       });
 
+      // 2. Validaciones de estado
       if (order.financialStatus === 'PAID') {
         throw new BadRequestException(
-          'No se pueden agregar pagos a un pedido que ya está pagado en su totalidad.',
+          'El pedido ya está pagado en su totalidad.',
         );
       }
 
       if (order.status === 'CANCELLED' || order.status === 'CLOSED') {
         throw new BadRequestException(
-          `No se pueden agregar pagos a un pedido con estado ${order.status}.`,
+          `No se pueden agregar pagos a un pedido ${order.status}.`,
         );
       }
 
-      const payment = await tx.payment.create({
+      // 3. Calcular lo pagado hasta el momento en memoria
+      const existingPayments = await tx.payment.findMany({
+        where: { orderId: id },
+      });
+      const currentPaidAmount = existingPayments.reduce(
+        (sum, p) => sum.plus(p.amount),
+        new Decimal(0),
+      );
+
+      // 4. EL NUEVO: Calcular el saldo pendiente y validar el exceso
+      const newPaymentAmount = new Decimal(createPaymentDto.amount);
+      const remainingBalance = order.totalPrice.minus(currentPaidAmount);
+
+      // Si el nuevo pago es mayor al saldo restante, bloqueamos la operación
+      if (newPaymentAmount.greaterThan(remainingBalance)) {
+        throw new BadRequestException(
+          `El monto del pago (${newPaymentAmount.toString()}) excede el saldo pendiente (${remainingBalance.toString()}).`,
+        );
+      }
+
+      // 5. Crear el pago
+      await tx.payment.create({
         data: {
           orderId: id,
-          amount: new Decimal(createPaymentDto.amount),
+          amount: newPaymentAmount,
           method: createPaymentDto.method,
           reference: createPaymentDto.reference,
           note: createPaymentDto.note,
         },
       });
 
-      const { financialStatus, paidAt } = await this.recalculateFinancialStatus(
-        tx,
-        order,
-      );
+      // 6. Recalcular estado financiero (Optimizado, sin volver a consultar a la BD)
+      const totalPaid = currentPaidAmount.plus(newPaymentAmount);
 
-      // 5. Actualizar la orden
+      let financialStatus: FinancialStatus = 'PENDING';
+      let paidAt: Date | null = order.paidAt;
+
+      if (totalPaid.greaterThanOrEqualTo(order.totalPrice)) {
+        financialStatus = 'PAID';
+        if (!order.paidAt) {
+          paidAt = new Date();
+        }
+      } else if (totalPaid.greaterThan(0)) {
+        financialStatus = 'PARTIALLY_PAID';
+      }
+
+      // 7. Actualizar la orden
       await tx.order.update({
         where: { id: order.id },
-        data: {
-          financialStatus,
-          paidAt, // Se setea solo si está totalmente pagada
-        },
+        data: { financialStatus, paidAt },
       });
 
-      return payment;
+      return {
+        amount: newPaymentAmount,
+        method: createPaymentDto.method,
+        remainingBalance: remainingBalance.minus(newPaymentAmount),
+      };
     });
   }
-
   private buildOrderItems(items: OrderItemDto[], productsDB: Product[]) {
     return items.map((item) => {
       const product = productsDB.find((p) => p.id === item.productId);
@@ -866,38 +898,38 @@ export class OrdersService {
       totalPrice: subtotalPrice,
     };
   }
-  private async recalculateFinancialStatus(
-    tx: TransactionClient,
-    order: Order,
-  ) {
-    // Obtener TODOS los pagos de la orden
-    const payments = await tx.payment.findMany({
-      where: { orderId: order.id },
-    });
+  // private async recalculateFinancialStatus(
+  //   tx: TransactionClient,
+  //   order: Order,
+  // ) {
+  //   // Obtener TODOS los pagos de la orden
+  //   const payments = await tx.payment.findMany({
+  //     where: { orderId: order.id },
+  //   });
 
-    // Sumar los pagos usando Decimal de Prisma
-    const totalPaid = payments.reduce(
-      (sum, payment) => sum.plus(payment.amount),
-      new Decimal(0),
-    );
+  //   // Sumar los pagos usando Decimal de Prisma
+  //   const totalPaid = payments.reduce(
+  //     (sum, payment) => sum.plus(payment.amount),
+  //     new Decimal(0),
+  //   );
 
-    let financialStatus: FinancialStatus = 'PENDING';
-    let paidAt: Date | null = order.paidAt; // Mantener el histórico si ya estaba pagada
+  //   let financialStatus: FinancialStatus = 'PENDING';
+  //   let paidAt: Date | null = order.paidAt; // Mantener el histórico si ya estaba pagada
 
-    // Comparar lo pagado vs el total de la orden
-    if (totalPaid.greaterThanOrEqualTo(order.totalPrice)) {
-      // Se pasó del total o es exacto
-      financialStatus = 'PAID';
-      if (!order.paidAt) {
-        paidAt = new Date(); // Seteamos el timestamp solo la primera vez
-      }
-    } else if (totalPaid.greaterThan(0)) {
-      // Pagó algo, pero le falta
-      financialStatus = 'PARTIALLY_PAID';
-    }
+  //   // Comparar lo pagado vs el total de la orden
+  //   if (totalPaid.greaterThanOrEqualTo(order.totalPrice)) {
+  //     // Se pasó del total o es exacto
+  //     financialStatus = 'PAID';
+  //     if (!order.paidAt) {
+  //       paidAt = new Date(); // Seteamos el timestamp solo la primera vez
+  //     }
+  //   } else if (totalPaid.greaterThan(0)) {
+  //     // Pagó algo, pero le falta
+  //     financialStatus = 'PARTIALLY_PAID';
+  //   }
 
-    return { financialStatus, paidAt };
-  }
+  //   return { financialStatus, paidAt };
+  // }
 
   private buildDateFilter(startDate?: string, endDate?: string) {
     const dateFilter: DateTimeFilter<'Order'> = {};
