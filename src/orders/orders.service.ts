@@ -23,18 +23,17 @@ import { CreatePaymentDto } from './dto/create-payment.dto.js';
 
 import { OrdersMapper } from './mapper/orders.mapper.js';
 
-import type {
-  FinancialStatus,
-  Product,
-  User,
-} from '../generated/prisma/client.js';
+import type { Order, Product, User } from '../generated/prisma/client.js';
 import type {
   DateTimeFilter,
   OrderOrderByWithRelationInput,
   OrderWhereInput,
 } from '../generated/prisma/models.js';
 
+import { Prisma } from '../generated/prisma/client.js';
+
 import { OrderStatsDto } from './dto/order-stats.dto.js';
+import type { OrderResponseDto } from './dto/order-response.dto.js';
 
 @Injectable()
 export class OrdersService {
@@ -42,144 +41,69 @@ export class OrdersService {
 
   constructor(private readonly prismaService: PrismaService) {}
 
+  private readonly orderInclude = {
+    orderItems: { where: { quantity: { gt: 0 } } },
+    customer: true,
+  } satisfies Prisma.OrderInclude;
+
   async create(createOrderDto: CreateOrderDto, user: User) {
     const { customerId, email, phone, note, items } = createOrderDto;
-
     const storeId = user.storeId;
 
-    const productIds = items.map((item) => item.productId);
-
-    try {
-      const prismaTx = await this.prismaService.$transaction(async (tx) => {
-        // 1. Obtener prefijos para el orderName;
-        const storeSetting = await tx.storeSetting.findFirstOrThrow({
-          where: { storeId },
-        });
-
-        const { nextOrderNumber, orderPrefix, orderSuffix } = storeSetting;
-
-        const orderName = `${orderPrefix}${nextOrderNumber}${orderSuffix}`;
-
-        // 2. Obtener localidad por defecto
-        const location = await tx.location.findFirstOrThrow({
-          where: {
-            storeId,
-            isDefault: true,
-            isActive: true,
-          },
-        });
-
-        // 3. Obtener datos del cliente
-
-        const customer = await tx.customer.findFirst({
-          where: {
-            id: customerId,
-            storeId: storeId,
-          },
-        });
-
-        // 4. Obtener productos
-        const products = await tx.product.findMany({
-          where: {
-            id: {
-              in: productIds,
-            },
-            storeId: storeId,
-          },
-        });
-
-        // 5. armar items de la orden
-        const orderItems = this.buildOrderItems(items, products);
-
-        // 6. calcular subtotales
-        const {
-          subtotalPrice,
-          totalPrice: totalPrice,
-          itemCount,
-        } = this.calculatedOrder(orderItems);
-
-        // 7. Decremental invetoryQuantity si product.trackInventory = true
-
-        const trackedProducts = orderItems.filter(
-          (item) => item.trackInventory,
-        );
-
-        if (trackedProducts.length > 0) {
-          const updateProductStockPromises = trackedProducts.map((item) => {
-            return tx.product.updateMany({
-              where: {
-                id: item.productId,
-                storeId: storeId,
-                inventoryQuantity: {
-                  gte: item.quantity,
-                },
-              },
-              data: {
-                inventoryQuantity: {
-                  decrement: item.quantity,
-                },
-              },
-            });
-          });
-
-          const updateProductStock = await Promise.all(
-            updateProductStockPromises,
-          );
-
-          updateProductStock.forEach((result, index) => {
-            if (result.count === 0) {
-              throw new BadRequestException(
-                `Existencias insuficientes para el producto "${trackedProducts[index].productTitle}".`,
-              );
-            }
-          });
-        }
-
-        //8. Crear la orden
-
-        const order = await tx.order.create({
-          data: {
-            userId: user.id,
-            storeId: storeId,
-            locationId: location.id,
-            customerId: customerId,
-            orderName: orderName,
-            orderNumber: nextOrderNumber,
-            itemCount: itemCount,
-            subtotalPrice: subtotalPrice,
-            totalPrice: totalPrice,
-            email: email ? email : customer?.email,
-            phone: phone ? phone : customer?.phone,
-            note: note,
-            orderItems: {
-              createMany: {
-                data: orderItems.map(({ trackInventory, ...rest }) => rest),
-              },
-            },
-          },
-          include: {
-            orderItems: {
-              where: {
-                quantity: { gt: 0 },
-              },
-            },
-            customer: true,
-            // user: true,
-          },
-        });
-        // 9. Incrementar el numero de orden
-        await tx.storeSetting.update({
-          where: { storeId: storeId },
-          data: { nextOrderNumber: { increment: 1 } },
-        });
-
-        return order;
+    const order = await this.runTransaction(async (tx) => {
+      // Allocate the number atomically; rollback also rolls back the counter.
+      const settings = await tx.storeSetting.update({
+        where: { storeId },
+        data: { nextOrderNumber: { increment: 1 } },
+        select: { nextOrderNumber: true, orderPrefix: true, orderSuffix: true },
       });
+      const orderNumber = settings.nextOrderNumber - 1n;
+      const location = await tx.location.findFirst({
+        where: { storeId, isDefault: true, isActive: true },
+        select: { id: true },
+      });
+      if (!location) {
+        throw new BadRequestException(
+          'Configure una ubicación predeterminada activa.',
+        );
+      }
+      const customer = await this.resolveCustomer(tx, customerId, storeId);
+      const products = await tx.product.findMany({
+        where: { id: { in: items.map((item) => item.productId) }, storeId },
+      });
+      const orderItems = this.buildOrderItems(items, products);
+      const totals = this.calculatedOrder(orderItems);
+      await this.decrementInventory(tx, storeId, orderItems);
 
-      return OrdersMapper.toOrderResponseDto(prismaTx);
-    } catch (error) {
-      this.handleDBExceptions(error);
-    }
+      return tx.order.create({
+        data: {
+          userId: user.id,
+          storeId,
+          locationId: location.id,
+          customerId: customer?.id ?? null,
+          orderNumber,
+          orderName: `${settings.orderPrefix}${orderNumber}${settings.orderSuffix}`,
+          ...totals,
+          email: email === undefined ? customer?.email : email,
+          phone: phone === undefined ? customer?.phone : phone,
+          note,
+          orderItems: {
+            createMany: {
+              data: orderItems.map((item) => ({
+                productId: item.productId,
+                productTitle: item.productTitle,
+                sku: item.sku,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                totalPrice: item.totalPrice,
+              })),
+            },
+          },
+        },
+        include: this.orderInclude,
+      });
+    });
+    return OrdersMapper.toOrderResponseDto(order);
   }
 
   async findAll(ordersPaginationDto: OrdersPaginationDto, storeId: string) {
@@ -358,150 +282,57 @@ export class OrdersService {
   }
 
   async update(id: string, updateOrderDto: UpdateOrderDto, storeId: string) {
-    await this.findOne(id, storeId);
-
     const { email, phone, note, customerId } = updateOrderDto;
-
-    try {
-      const updateOrder = await this.prismaService.order.update({
-        where: {
-          id: id,
-          storeId: storeId,
-        },
-        data: {
-          note: note,
-          email: email,
-          phone: phone,
-          customerId: customerId,
-        },
-        include: {
-          orderItems: {
-            where: {
-              quantity: { gt: 0 },
-            },
-          },
-          customer: true,
-        },
+    const order = await this.runTransaction(async (tx) => {
+      await this.getOrder(tx, id, storeId);
+      await this.resolveCustomer(tx, customerId, storeId);
+      return tx.order.update({
+        where: { id, storeId },
+        data: { email, phone, note, customerId },
+        include: this.orderInclude,
       });
-
-      return OrdersMapper.toOrderResponseDto(updateOrder);
-    } catch (error) {
-      this.handleDBExceptions(error);
-    }
+    });
+    return OrdersMapper.toOrderResponseDto(order);
   }
 
-  // Items
   async addItems(id: string, storeId: string, addItemsDto: AddItemsDto) {
-    const order = await this.findOne(id, storeId);
-
-    if (order.status !== 'OPEN') {
-      throw new BadRequestException(
-        'El pedido debe estar abierto para agregar artículos',
-      );
-    }
-
-    const { productIds } = addItemsDto;
-
-    const prismaTx = await this.prismaService.$transaction(async (tx) => {
-      // 1.Obtener products DB
-      const productsDB = await tx.product.findMany({
-        where: {
-          id: {
-            in: productIds,
-          },
-          storeId: storeId,
-        },
+    const items = addItemsDto.productIds.map((productId) => ({
+      productId,
+      quantity: 1,
+    }));
+    const order = await this.runTransaction(async (tx) => {
+      const currentOrder = await this.getOrder(tx, id, storeId);
+      await this.assertUnpaidOpenOrder(tx, currentOrder);
+      const products = await tx.product.findMany({
+        where: { id: { in: addItemsDto.productIds }, storeId },
       });
-
-      // 2. crear items
-      const items = productIds.map((productId) => ({
-        productId: productId,
-        quantity: 1,
-      }));
-
-      const orderItems = this.buildOrderItems(items, productsDB);
-
-      const updateOrderItems = await tx.order.update({
-        where: { id: id, storeId: storeId },
+      const orderItems = this.buildOrderItems(items, products);
+      const totals = this.calculatedOrder([
+        ...currentOrder.orderItems,
+        ...orderItems,
+      ]);
+      await this.decrementInventory(tx, storeId, orderItems);
+      return tx.order.update({
+        where: { id, storeId },
         data: {
+          ...totals,
           orderItems: {
             createMany: {
-              data: orderItems.map(({ trackInventory, ...rest }) => rest),
+              data: orderItems.map((item) => ({
+                productId: item.productId,
+                productTitle: item.productTitle,
+                sku: item.sku,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                totalPrice: item.totalPrice,
+              })),
             },
           },
         },
-        include: {
-          orderItems: {
-            where: {
-              quantity: { gt: 0 },
-            },
-          },
-        },
+        include: this.orderInclude,
       });
-
-      // 3 actualizar stock de los productos
-      const trackedProducts = orderItems.filter((item) => item.trackInventory);
-
-      if (trackedProducts.length > 0) {
-        const updateProductStockPromises = trackedProducts.map((item) => {
-          return tx.product.updateMany({
-            where: {
-              id: item.productId,
-              storeId: storeId,
-              inventoryQuantity: {
-                gte: item.quantity,
-              },
-            },
-            data: {
-              inventoryQuantity: {
-                decrement: item.quantity,
-              },
-            },
-          });
-        });
-
-        const updateProductStock = await Promise.all(
-          updateProductStockPromises,
-        );
-
-        updateProductStock.forEach((result, index) => {
-          if (result.count === 0) {
-            throw new BadRequestException(
-              `Existencias insuficientes para el producto "${trackedProducts[index].productTitle}".`,
-            );
-          }
-        });
-      }
-
-      // 4. calcular total del pedido
-      const {
-        itemCount,
-        subtotalPrice,
-        totalPrice: totalPrice,
-      } = this.calculatedOrder(updateOrderItems.orderItems);
-
-      // 5. actualizar el pedido con los nuevos totales y items
-      const updateOrderWithItems = await tx.order.update({
-        where: { id: id, storeId: storeId },
-        data: {
-          itemCount: itemCount,
-          subtotalPrice: subtotalPrice,
-          totalPrice: totalPrice,
-        },
-        include: {
-          orderItems: {
-            where: {
-              quantity: { gt: 0 },
-            },
-          },
-          customer: true,
-        },
-      });
-
-      return updateOrderWithItems;
     });
-
-    return OrdersMapper.toOrderResponseDto(prismaTx);
+    return OrdersMapper.toOrderResponseDto(order);
   }
 
   async editItemQuantity(
@@ -510,154 +341,64 @@ export class OrdersService {
     editItemQuantityDto: EditItemQuantityDto,
     storeId: string,
   ) {
-    const currentOrder = await this.findOne(id, storeId);
-
-    if (currentOrder.status !== 'OPEN') {
-      throw new BadRequestException(
-        'El pedido debe estar abierto para modificar la cantidad de un artículo.',
-      );
-    }
-
     const { quantity: newQuantity, restock } = editItemQuantityDto;
-
-    return await this.prismaService.$transaction(async (tx) => {
-      const currentItem = await tx.orderItem.findUniqueOrThrow({
-        where: {
-          id: itemId,
-          orderId: id,
-        },
-        include: {
-          product: true,
-        },
+    this.validateQuantity(newQuantity, true);
+    const order = await this.runTransaction(async (tx) => {
+      const currentOrder = await this.getOrder(tx, id, storeId);
+      await this.assertUnpaidOpenOrder(tx, currentOrder);
+      const currentItem = await tx.orderItem.findFirst({
+        where: { id: itemId, orderId: id, order: { storeId } },
+        include: { product: true },
       });
-
-      const currentQuantity = currentItem.quantity;
-      const delta = newQuantity - currentQuantity;
-
-      if (delta === 0) {
-        return currentOrder;
+      if (!currentItem) {
+        throw new NotFoundException('No se encontró el artículo del pedido.');
       }
+      this.assertEligibleProduct(currentItem.product, storeId);
+      const delta = newQuantity - currentItem.quantity;
+      const totalPrice = currentItem.unitPrice.mul(newQuantity);
+      const items = currentOrder.orderItems.filter(
+        (item) => item.id !== itemId,
+      );
+      if (newQuantity > 0) {
+        items.push({ ...currentItem, quantity: newQuantity, totalPrice });
+      }
+      const totals = this.calculatedOrder(items);
+      if (delta === 0) return currentOrder;
 
       if (currentItem.product.trackInventory) {
         if (delta > 0) {
-          const result = await tx.product.updateMany({
-            where: {
-              id: currentItem.productId,
-              storeId: storeId,
-              inventoryQuantity: { gte: delta },
+          await this.decrementInventory(tx, storeId, [
+            {
+              productId: currentItem.productId,
+              quantity: delta,
+              trackInventory: true,
             },
-            data: {
-              inventoryQuantity: { decrement: delta },
-            },
-          });
-
-          if (result.count === 0) {
-            throw new BadRequestException(
-              `Existencias insuficientes para el producto "${currentItem.product.title}".`,
-            );
-          }
-        } else if (delta < 0 && restock) {
+          ]);
+        } else if (restock) {
           await tx.product.update({
-            where: {
-              id: currentItem.productId,
-              storeId: storeId,
-            },
-            data: {
-              inventoryQuantity: { increment: Math.abs(delta) },
-            },
+            where: { id: currentItem.productId, storeId },
+            data: { inventoryQuantity: { increment: -delta } },
           });
         }
       }
-
-      const newTotalPrice = currentItem.unitPrice.mul(newQuantity);
       await tx.orderItem.update({
-        where: {
-          id: itemId,
-          orderId: id,
-        },
-        data: {
-          quantity: newQuantity,
-          totalPrice: newTotalPrice,
-        },
+        where: { id: itemId, orderId: id },
+        data: { quantity: newQuantity, totalPrice },
       });
-
-      const order = await tx.order.findFirstOrThrow({
-        where: {
-          id: id,
-          storeId: storeId,
-        },
-        include: {
-          orderItems: {
-            where: {
-              quantity: { gt: 0 },
-            },
-          },
-        },
+      return tx.order.update({
+        where: { id, storeId },
+        data: totals,
+        include: this.orderInclude,
       });
-
-      const { itemCount, subtotalPrice, totalPrice } = this.calculatedOrder(
-        order.orderItems,
-      );
-
-      const updatedOrder = await tx.order.update({
-        where: {
-          id: id,
-          storeId: storeId,
-        },
-        data: {
-          itemCount: itemCount,
-          subtotalPrice: subtotalPrice,
-          totalPrice: totalPrice,
-        },
-        include: {
-          orderItems: {
-            where: {
-              quantity: { gt: 0 },
-            },
-          },
-          customer: true,
-        },
-      });
-
-      return OrdersMapper.toOrderResponseDto(updatedOrder);
     });
+    return OrdersMapper.toOrderResponseDto(order);
   }
 
-  async orderOpen(id: string, storeId: string) {
-    const order = await this.findOne(id, storeId);
-
-    if (order.status !== 'CLOSED') {
-      throw new BadRequestException(
-        'Solo los pedidos cerrados pueden volver a abrirse.',
-      );
-    }
-
-    if (order.financialStatus === 'VOIDED') {
-      throw new BadRequestException(
-        'Los pedidos anulados no pueden volver a abrirse. Cree un nuevo pedido.',
-      );
-    }
-
-    const openOrder = await this.prismaService.order.update({
-      where: {
-        id: id,
-        storeId: storeId,
-      },
-      data: {
-        status: 'OPEN',
-        closedAt: null,
-      },
-      include: {
-        orderItems: {
-          where: {
-            quantity: { gt: 0 },
-          },
-        },
-        customer: true,
-      },
-    });
-
-    return OrdersMapper.toOrderResponseDto(openOrder);
+  async orderOpen(id: string, storeId: string): Promise<OrderResponseDto> {
+    await this.findOne(id, storeId);
+    throw new BadRequestException(
+      'No se permite reabrir pedidos. Cree un nuevo pedido.',
+    );
   }
 
   async orderCancel(
@@ -665,271 +406,324 @@ export class OrdersService {
     storeId: string,
     cancelOrderDto: CancelOrderDto,
   ) {
-    const { reason } = cancelOrderDto;
-    const order = await this.findOne(id, storeId);
-
-    if (order.status === 'CANCELLED') {
-      return order;
-    }
-
-    if (order.status === 'CLOSED') {
-      throw new BadRequestException('No se puede cancelar un pedido cerrado.');
-    }
-
-    return this.prismaService.$transaction(async (tx) => {
-      const orderItems = await tx.orderItem.findMany({
-        where: {
-          order: {
-            id: id,
-            storeId: storeId,
-          },
-        },
-        include: {
-          product: true,
-        },
+    const order = await this.runTransaction(async (tx) => {
+      const currentOrder = await this.getOrder(tx, id, storeId);
+      if (currentOrder.status === 'CANCELLED') return currentOrder;
+      await this.assertUnpaidOpenOrder(tx, currentOrder);
+      if (!cancelOrderDto.reason.trim()) {
+        throw new BadRequestException('Indique el motivo de cancelación.');
+      }
+      const items = await tx.orderItem.findMany({
+        where: { orderId: id, order: { storeId }, quantity: { gt: 0 } },
+        include: { product: true },
+        orderBy: [{ productId: 'asc' }, { id: 'asc' }],
       });
-
-      for (const item of orderItems) {
-        if (item.product.trackInventory && item.quantity > 0) {
+      // Preserve the existing cancellation contract: always restore tracked stock.
+      for (const item of items) {
+        if (item.product.storeId !== storeId) {
+          throw new BadRequestException(
+            'El producto no pertenece a esta tienda.',
+          );
+        }
+        if (item.product.trackInventory) {
           await tx.product.update({
-            where: { id: item.productId },
-            data: {
-              inventoryQuantity: { increment: item.quantity },
-            },
+            where: { id: item.productId, storeId },
+            data: { inventoryQuantity: { increment: item.quantity } },
           });
         }
       }
-
-      const cancelledOrder = await tx.order.update({
-        where: {
-          id: id,
-          storeId: storeId,
-        },
+      return tx.order.update({
+        where: { id, storeId },
         data: {
           status: 'CANCELLED',
           financialStatus: 'VOIDED',
-          cancelReason: reason,
+          cancelReason: cancelOrderDto.reason,
           cancelledAt: new Date(),
         },
-        include: {
-          orderItems: {
-            where: {
-              quantity: { gt: 0 },
-            },
-          },
-          customer: true,
-        },
+        include: this.orderInclude,
       });
-
-      return OrdersMapper.toOrderResponseDto(cancelledOrder);
     });
+    return OrdersMapper.toOrderResponseDto(order);
   }
 
   async orderClose(id: string, storeId: string) {
-    const order = await this.findOne(id, storeId);
-
-    if (order.status !== 'OPEN') {
-      throw new BadRequestException(
-        'No se puede cerrar un pedido que no está abierto.',
-      );
-    }
-
-    const invalidFinancialStatuses = ['PENDING', 'PARTIALLY_PAID'];
-    if (invalidFinancialStatuses.includes(order.financialStatus)) {
-      throw new BadRequestException(
-        `No se puede cerrar el pedido. El estado financiero es ${order.financialStatus}. Todas las transacciones deben estar finalizadas (pagadas, reembolsadas, etc.).`,
-      );
-    }
-    try {
-      const closeOrder = await this.prismaService.order.update({
-        where: {
-          id: id,
-          storeId: storeId,
-        },
+    const order = await this.runTransaction(async (tx) => {
+      const currentOrder = await this.getOrder(tx, id, storeId);
+      const paid = await this.getPaidAmount(tx, id, storeId);
+      this.validateMoney(currentOrder.totalPrice);
+      if (
+        !['OPEN', 'CLOSED'].includes(currentOrder.status) ||
+        currentOrder.financialStatus !== 'PAID' ||
+        !paid.equals(currentOrder.totalPrice) ||
+        !currentOrder.paidAt
+      ) {
+        throw new BadRequestException(
+          'Solo se pueden cerrar pedidos completamente pagados y coherentes con sus pagos.',
+        );
+      }
+      if (currentOrder.status === 'CLOSED' && currentOrder.closedAt)
+        return currentOrder;
+      return tx.order.update({
+        where: { id, storeId },
         data: {
           status: 'CLOSED',
-          closedAt: new Date(),
+          closedAt: currentOrder.closedAt ?? new Date(),
         },
-        include: {
-          orderItems: {
-            where: {
-              quantity: { gt: 0 },
-            },
-          },
-          customer: true,
-        },
+        include: this.orderInclude,
       });
-
-      return OrdersMapper.toOrderResponseDto(closeOrder);
-    } catch (error) {
-      this.handleDBExceptions(error);
-    }
+    });
+    return OrdersMapper.toOrderResponseDto(order);
   }
 
-  // Payments
   async addPayment(
     id: string,
     storeId: string,
     createPaymentDto: CreatePaymentDto,
   ) {
-    return this.prismaService.$transaction(async (tx) => {
-      // 1. Obtener la orden
-      const order = await tx.order.findFirstOrThrow({
-        where: { id, storeId },
-      });
-
-      // 2. Validaciones de estado
-      if (order.financialStatus === 'PAID') {
+    const amount = new Decimal(createPaymentDto.amount);
+    if (amount.greaterThan('9999999999.99')) {
+      throw new BadRequestException('El importe supera el máximo permitido.');
+    }
+    return this.runTransaction(async (tx) => {
+      const order = await this.getOrder(tx, id, storeId);
+      if (
+        order.status !== 'OPEN' ||
+        !['PENDING', 'PARTIALLY_PAID'].includes(order.financialStatus)
+      ) {
+        throw new BadRequestException('El pedido no admite pagos.');
+      }
+      this.validateMoney(order.totalPrice);
+      const paid = await this.getPaidAmount(tx, id, storeId);
+      const remainingBalance = order.totalPrice.minus(paid);
+      if (amount.greaterThan(remainingBalance)) {
         throw new BadRequestException(
-          'El pedido ya está pagado en su totalidad.',
+          'El importe del pago excede el saldo pendiente.',
         );
       }
-
-      if (order.status === 'CANCELLED' || order.status === 'CLOSED') {
-        throw new BadRequestException(
-          `No se pueden agregar pagos a un pedido ${order.status}.`,
-        );
-      }
-
-      // 3. Calcular lo pagado hasta el momento en memoria
-      const existingPayments = await tx.payment.findMany({
-        where: { orderId: id },
-      });
-      const currentPaidAmount = existingPayments.reduce(
-        (sum, p) => sum.plus(p.amount),
-        new Decimal(0),
-      );
-
-      // 4. EL NUEVO: Calcular el saldo pendiente y validar el exceso
-      const newPaymentAmount = new Decimal(createPaymentDto.amount);
-      const remainingBalance = order.totalPrice.minus(currentPaidAmount);
-
-      // Si el nuevo pago es mayor al saldo restante, bloqueamos la operación
-      if (newPaymentAmount.greaterThan(remainingBalance)) {
-        throw new BadRequestException(
-          `El monto del pago (${newPaymentAmount.toString()}) excede el saldo pendiente (${remainingBalance.toString()}).`,
-        );
-      }
-
-      // 5. Crear el pago
       await tx.payment.create({
         data: {
           orderId: id,
-          amount: newPaymentAmount,
+          amount,
           method: createPaymentDto.method,
           reference: createPaymentDto.reference,
           note: createPaymentDto.note,
         },
       });
-
-      // 6. Recalcular estado financiero (Optimizado, sin volver a consultar a la BD)
-      const totalPaid = currentPaidAmount.plus(newPaymentAmount);
-
-      let financialStatus: FinancialStatus = 'PENDING';
-      let paidAt: Date | null = order.paidAt;
-
-      if (totalPaid.greaterThanOrEqualTo(order.totalPrice)) {
-        financialStatus = 'PAID';
-        if (!order.paidAt) {
-          paidAt = new Date();
-        }
-      } else if (totalPaid.greaterThan(0)) {
-        financialStatus = 'PARTIALLY_PAID';
-      }
-
-      // 7. Actualizar la orden
+      const fullyPaid = amount.equals(remainingBalance);
+      const now = new Date();
       await tx.order.update({
-        where: { id: order.id },
-        data: { financialStatus, paidAt },
+        where: { id, storeId },
+        data: {
+          financialStatus: fullyPaid ? 'PAID' : 'PARTIALLY_PAID',
+          status: fullyPaid ? 'CLOSED' : 'OPEN',
+          paidAt: fullyPaid ? now : null,
+          closedAt: fullyPaid ? now : null,
+        },
       });
-
       return {
-        amount: newPaymentAmount,
+        amount,
         method: createPaymentDto.method,
-        remainingBalance: remainingBalance.minus(newPaymentAmount),
+        remainingBalance: remainingBalance.minus(amount),
       };
     });
   }
-  private buildOrderItems(items: OrderItemDto[], productsDB: Product[]) {
+
+  private async runTransaction<T>(
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    // Retry only confirmed rollbacks. This does not make HTTP requests idempotent.
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await this.prismaService.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error: unknown) {
+        if (
+          error instanceof PrismaClientKnownRequestError &&
+          error.code === 'P2034' &&
+          attempt < maxAttempts
+        ) {
+          continue;
+        }
+        this.handleDBExceptions(error);
+      }
+    }
+    throw new ConflictException(
+      'El pedido cambió durante la operación. Consulte su estado e intente nuevamente.',
+    );
+  }
+
+  private async getOrder(
+    tx: Prisma.TransactionClient,
+    id: string,
+    storeId: string,
+  ) {
+    const order = await tx.order.findFirst({
+      where: { id, storeId },
+      include: this.orderInclude,
+    });
+    if (!order)
+      throw new NotFoundException('No se encontró el pedido en esta tienda.');
+    return order;
+  }
+
+  private async assertUnpaidOpenOrder(
+    tx: Prisma.TransactionClient,
+    order: Order,
+  ) {
+    const paymentCount = await tx.payment.count({
+      where: { orderId: order.id, order: { storeId: order.storeId } },
+    });
+    if (
+      order.status !== 'OPEN' ||
+      order.financialStatus !== 'PENDING' ||
+      paymentCount > 0
+    ) {
+      throw new BadRequestException(
+        'Solo se pueden modificar o cancelar pedidos abiertos sin pagos.',
+      );
+    }
+  }
+
+  private async getPaidAmount(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    storeId: string,
+  ) {
+    const payments = await tx.payment.findMany({
+      where: { orderId, order: { storeId } },
+      select: { amount: true },
+    });
+    return payments.reduce((sum, payment) => {
+      this.validateMoney(payment.amount);
+      return sum.plus(payment.amount);
+    }, new Decimal(0));
+  }
+
+  private async resolveCustomer(
+    tx: Prisma.TransactionClient,
+    customerId: string | null | undefined,
+    storeId: string,
+  ) {
+    if (customerId === undefined || customerId === null) return null;
+    const customer = await tx.customer.findFirst({
+      where: { id: customerId, storeId },
+      select: { id: true, email: true, phone: true },
+    });
+    if (!customer)
+      throw new BadRequestException('El cliente no existe en esta tienda.');
+    return customer;
+  }
+
+  private validateQuantity(quantity: number, allowZero = false) {
+    // Prisma Int is a PostgreSQL signed 32-bit integer.
+    if (
+      !Number.isInteger(quantity) ||
+      quantity < (allowZero ? 0 : 1) ||
+      quantity > 2147483647
+    ) {
+      throw new BadRequestException(
+        'La cantidad debe ser un entero dentro del rango permitido.',
+      );
+    }
+  }
+
+  private validateMoney(amount: Decimal, allowZero = false) {
+    if (
+      !amount.isFinite() ||
+      amount.lessThan(allowZero ? 0 : '0.01') ||
+      amount.decimalPlaces() > 2 ||
+      amount.greaterThan('9999999999.99')
+    ) {
+      throw new BadRequestException(
+        'El importe debe estar dentro del rango permitido y tener como máximo dos decimales.',
+      );
+    }
+  }
+
+  private assertEligibleProduct(product: Product, storeId: string) {
+    if (product.storeId !== storeId || product.status !== 'ACTIVE') {
+      throw new BadRequestException(
+        'El producto no está disponible en esta tienda.',
+      );
+    }
+  }
+
+  private buildOrderItems(items: OrderItemDto[], products: Product[]) {
     return items.map((item) => {
-      const product = productsDB.find((p) => p.id === item.productId);
-      if (!product) {
+      const product = products.find(
+        (candidate) => candidate.id === item.productId,
+      );
+      if (!product || product.status !== 'ACTIVE') {
         throw new BadRequestException(
-          `No se encontró el producto con id: ${item.productId}.`,
+          'Uno de los productos no existe o no está disponible en esta tienda.',
         );
       }
-
-      const unitPrice = new Decimal(product.price);
-      const totalPrice = unitPrice.mul(item.quantity);
-
+      this.validateQuantity(item.quantity);
+      this.validateMoney(product.price, true);
+      const totalPrice = product.price.mul(item.quantity);
+      this.validateMoney(totalPrice, true);
       return {
-        productId: item.productId,
+        productId: product.id,
         productTitle: product.title,
         sku: product.sku,
         quantity: item.quantity,
-        unitPrice: unitPrice,
-        totalPrice: totalPrice,
+        unitPrice: product.price,
+        totalPrice,
         trackInventory: product.trackInventory,
       };
     });
   }
+
+  private async decrementInventory(
+    tx: Prisma.TransactionClient,
+    storeId: string,
+    items: { productId: string; quantity: number; trackInventory: boolean }[],
+  ) {
+    // Consistent product ordering across creation, editing and cancellation.
+    const trackedItems = items
+      .filter((item) => item.trackInventory)
+      .sort((a, b) => a.productId.localeCompare(b.productId));
+    for (const item of trackedItems) {
+      const result = await tx.product.updateMany({
+        where: {
+          id: item.productId,
+          storeId,
+          status: 'ACTIVE',
+          inventoryQuantity: { gte: item.quantity },
+        },
+        data: { inventoryQuantity: { decrement: item.quantity } },
+      });
+      if (result.count !== 1) {
+        throw new BadRequestException(
+          'Existencias insuficientes o producto no disponible.',
+        );
+      }
+    }
+  }
+
   private calculatedOrder(
-    orderItems: {
-      productId: string;
-      productTitle: string;
-      sku: string | null;
-      quantity: number;
-      unitPrice: Decimal;
-      totalPrice: Decimal;
-      trackInventory?: boolean;
-    }[],
+    orderItems: { quantity: number; unitPrice: Decimal; totalPrice: Decimal }[],
   ) {
     let itemCount = 0;
     let subtotalPrice = new Decimal(0);
-
     for (const item of orderItems) {
+      this.validateQuantity(item.quantity);
+      this.validateMoney(item.unitPrice, true);
+      this.validateMoney(item.totalPrice, true);
+      if (!item.totalPrice.equals(item.unitPrice.mul(item.quantity))) {
+        throw new BadRequestException(
+          'Los importes del artículo son inconsistentes.',
+        );
+      }
       itemCount += item.quantity;
       subtotalPrice = subtotalPrice.plus(item.totalPrice);
     }
-
-    return {
-      itemCount,
-      subtotalPrice,
-      totalPrice: subtotalPrice,
-    };
+    this.validateQuantity(itemCount);
+    this.validateMoney(subtotalPrice);
+    return { itemCount, subtotalPrice, totalPrice: subtotalPrice };
   }
-  // private async recalculateFinancialStatus(
-  //   tx: TransactionClient,
-  //   order: Order,
-  // ) {
-  //   // Obtener TODOS los pagos de la orden
-  //   const payments = await tx.payment.findMany({
-  //     where: { orderId: order.id },
-  //   });
-
-  //   // Sumar los pagos usando Decimal de Prisma
-  //   const totalPaid = payments.reduce(
-  //     (sum, payment) => sum.plus(payment.amount),
-  //     new Decimal(0),
-  //   );
-
-  //   let financialStatus: FinancialStatus = 'PENDING';
-  //   let paidAt: Date | null = order.paidAt; // Mantener el histórico si ya estaba pagada
-
-  //   // Comparar lo pagado vs el total de la orden
-  //   if (totalPaid.greaterThanOrEqualTo(order.totalPrice)) {
-  //     // Se pasó del total o es exacto
-  //     financialStatus = 'PAID';
-  //     if (!order.paidAt) {
-  //       paidAt = new Date(); // Seteamos el timestamp solo la primera vez
-  //     }
-  //   } else if (totalPaid.greaterThan(0)) {
-  //     // Pagó algo, pero le falta
-  //     financialStatus = 'PARTIALLY_PAID';
-  //   }
-
-  //   return { financialStatus, paidAt };
-  // }
 
   private buildDateFilter(startDate?: string, endDate?: string) {
     const dateFilter: DateTimeFilter<'Order'> = {};
@@ -969,39 +763,36 @@ export class OrdersService {
     return Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {};
   }
 
-  private handleDBExceptions(error: any): never {
-    if (error instanceof HttpException) {
-      throw error;
-    }
-
+  private handleDBExceptions(error: unknown): never {
+    if (error instanceof HttpException) throw error;
     if (error instanceof PrismaClientKnownRequestError) {
       switch (error.code) {
-        case 'P2002': {
-          const target = error.meta?.target as string[] | undefined;
-          const fields = target ? target.join(', ') : 'campo desconocido';
-
+        case 'P2002':
           throw new ConflictException(
-            `Valor duplicado: Los campos [${fields}] deben ser únicos.`,
+            'El registro ya existe. Consulte el estado del pedido.',
           );
-        }
-
-        case 'P2025': {
+        case 'P2025':
           throw new NotFoundException('No se encontró el registro requerido.');
-        }
-
-        case 'P2003': {
-          const field = error.meta?.field_name as string | undefined;
+        case 'P2003':
           throw new BadRequestException(
-            `No se puede realizar la operación: El campo referenciado ${field || 'desconocido'} no existe.`,
+            'Una referencia no existe o está en uso.',
           );
-        }
+        case 'P2000':
+        case 'P2020':
+        case 'P2023':
+          throw new BadRequestException(
+            'Los datos están fuera del formato o rango permitido.',
+          );
+        case 'P2034':
+          throw new ConflictException(
+            'El pedido cambió durante la operación. Consulte su estado e intente nuevamente.',
+          );
       }
     }
-
-    this.logger.error('Unexpected error in OrdersService', error.stack);
-
+    // Do not log database details, query parameters or customer information.
+    this.logger.error('Unexpected error in OrdersService');
     throw new InternalServerErrorException(
-      'Error interno del servidor. Intente nuevamente más tarde.',
+      'No se pudo confirmar la operación. Consulte el estado del pedido antes de repetirla.',
     );
   }
 }

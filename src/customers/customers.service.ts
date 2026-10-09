@@ -24,9 +24,19 @@ export class CustomersService {
           ...createCustomerDto,
           storeId: storeId,
         },
+        include: {
+          _count: {
+            select: { orders: true },
+          },
+          orders: {
+            select: {
+              totalPrice: true,
+            },
+          },
+        },
       });
 
-      return customer;
+      return CustomerMapper.toEntity(customer);
     } catch (error) {
       DBExceptionHelper.handle(error);
     }
