@@ -1,9 +1,12 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { PrismaService } from '../prisma.service.js';
-import { JwtPayload } from './interfaces/jwt-payload.interface.js';
 import { JwtService } from '@nestjs/jwt';
+
+import { PrismaService } from '../prisma.service.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
+
+import type { User } from '../generated/prisma/client.js';
+import type { JwtPayload } from './interfaces/jwt-payload.interface.js';
 
 @Injectable()
 export class AuthService {
@@ -41,6 +44,13 @@ export class AuthService {
       // TODO: mapper a la nueva entidad
       user,
       // user: UserMapper.toEntity(user),
+    };
+  }
+
+  checkAuthStatus(user: User) {
+    return {
+      token: this.getJWTToken({ id: user.id }),
+      user,
     };
   }
 
