@@ -4,4 +4,7 @@ export default () => ({
   api: {
     prefix: process.env.API_PREFIX || 'api',
   },
+  jwt: {
+    secret: process.env.JWT_SECRET,
+  },
 });
