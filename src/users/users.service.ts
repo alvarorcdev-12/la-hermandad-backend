@@ -1,4 +1,16 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Prisma } from '../generated/prisma/client.js';
+import { PosPinService } from './pos-pin/pos-pin.service.js';
+import {
+  POS_PIN_PATTERN,
+  POS_PIN_MESSAGE,
+} from './pos-pin/pos-pin.validation.js';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma.service.js';
 
@@ -16,17 +28,57 @@ import type {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly posPinService: PosPinService,
+  ) {}
+
+  async generatePin(storeId: string) {
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const pin = this.posPinService.generate();
+      if (!POS_PIN_PATTERN.test(pin)) continue;
+      const assigned = await this.prismaService.user.findUnique({
+        where: {
+          storeId_posPinLookup: {
+            storeId,
+            posPinLookup: this.posPinService.lookup(pin, storeId),
+          },
+        },
+        select: { id: true },
+      });
+      if (!assigned) return { pin };
+    }
+    throw new ServiceUnavailableException(
+      'No se pudo generar un PIN disponible. Intenta nuevamente.',
+    );
+  }
 
   async create(createUserDto: CreateUserDto, storeId: string) {
-    const { firstName, lastName, email, phone, password, role } = createUserDto;
+    const { firstName, lastName, email, phone, password, role, posPin } =
+      createUserDto;
+    if (
+      role === 'CASHIER' &&
+      (typeof posPin !== 'string' || !POS_PIN_PATTERN.test(posPin))
+    ) {
+      throw new BadRequestException(POS_PIN_MESSAGE);
+    }
+    const pinFields =
+      role === 'CASHIER' && posPin !== undefined
+        ? {
+            posPinEncrypted: this.posPinService.encrypt(posPin, storeId),
+            posPinLookup: this.posPinService.lookup(posPin, storeId),
+          }
+        : {};
 
-    const existUser = await this.prismaService.user.findFirst({
-      where: {
-        email: email,
-        storeId: storeId,
-      },
-    });
+    const existUser =
+      email === undefined
+        ? null
+        : await this.prismaService.user.findFirst({
+            where: {
+              email: email,
+              storeId: storeId,
+            },
+          });
 
     if (existUser) {
       throw new BadRequestException(
@@ -34,20 +86,47 @@ export class UsersService {
       );
     }
 
-    const user = await this.prismaService.user.create({
-      data: {
-        storeId: storeId,
-        firstName: firstName,
-        lastName: lastName,
-        email: email,
-        phone: phone,
-        password: password ? bcrypt.hashSync(password, 10) : null,
-        role: role,
-        isShopOwner: false,
-      },
-    });
+    try {
+      const user = await this.prismaService.user.create({
+        data: {
+          storeId: storeId,
+          firstName: firstName,
+          lastName: lastName,
+          email: email,
+          phone: phone,
+          password: password ? bcrypt.hashSync(password, 10) : null,
+          role: role,
+          isShopOwner: false,
+          ...pinFields,
+        },
+      });
 
-    return UserMapper.toStaffUserEntity(user);
+      return UserMapper.toStaffUserEntity(user);
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const target: unknown = error.meta?.target;
+        if (
+          (Array.isArray(target) &&
+            target.some(
+              (field: unknown) =>
+                field === 'pos_pin_lookup' || field === 'posPinLookup',
+            )) ||
+          target === 'users_store_id_pos_pin_lookup_key'
+        ) {
+          throw new ConflictException(
+            'Este PIN ya está en uso. Genera uno nuevo.',
+          );
+        }
+        throw new ConflictException(
+          'Ya existe un usuario con esos datos únicos.',
+        );
+      }
+      // Prisma errors can include write arguments; never log PIN storage fields.
+      throw new InternalServerErrorException('No se pudo crear el usuario.');
+    }
   }
 
   async findAll(paginationDto: PaginationDto, storeId: string) {

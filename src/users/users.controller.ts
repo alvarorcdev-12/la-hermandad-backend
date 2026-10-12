@@ -1,5 +1,7 @@
 import {
   Controller,
+  Header,
+  HttpCode,
   Get,
   Post,
   Body,
@@ -20,6 +22,14 @@ import { GetUser } from '../auth/decorators/get-user.decorator.js';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Auth('OWNER')
+  @Post('generate-pin')
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
+  generatePin(@GetUser('storeId') storeId: string) {
+    return this.usersService.generatePin(storeId);
+  }
 
   @Auth('OWNER')
   @Post()

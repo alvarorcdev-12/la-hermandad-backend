@@ -1,3 +1,4 @@
+import { UserMapper } from '../users/mappers/user.mapper.js';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
@@ -42,7 +43,7 @@ export class AuthService {
     return {
       token: this.getJWTToken({ id: user.id }),
       // TODO: mapper a la nueva entidad
-      user,
+      user: UserMapper.withoutPosPin(user),
       // user: UserMapper.toEntity(user),
     };
   }
@@ -50,7 +51,7 @@ export class AuthService {
   checkAuthStatus(user: User) {
     return {
       token: this.getJWTToken({ id: user.id }),
-      user,
+      user: UserMapper.withoutPosPin(user),
     };
   }
 

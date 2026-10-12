@@ -4,6 +4,13 @@ import { User } from '../entities/user.entity.js';
 import type { User as UserDB } from '../../generated/prisma/client.js';
 
 export class UserMapper {
+  static withoutPosPin<T extends UserDB>(
+    user: T,
+  ): Omit<T, 'posPinEncrypted' | 'posPinLookup'> {
+    const { posPinEncrypted: _encrypted, posPinLookup: _lookup, ...response } = user;
+    return response;
+  }
+
   static toEntity(user: UserDB): User {
     return {
       id: user.id,
