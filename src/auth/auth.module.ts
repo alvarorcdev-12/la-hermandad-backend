@@ -7,6 +7,7 @@ import { AuthService } from './auth.service.js';
 import { AuthController } from './auth.controller.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 import { PrismaService } from '../prisma.service.js';
+import { PosPinService } from '../users/pos-pin/pos-pin.service.js';
 
 @Module({
   imports: [
@@ -28,7 +29,7 @@ import { PrismaService } from '../prisma.service.js';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, PrismaService, JwtStrategy],
+  providers: [AuthService, PrismaService, JwtStrategy, PosPinService],
   exports: [PassportModule, JwtStrategy, JwtModule],
 })
 export class AuthModule {}

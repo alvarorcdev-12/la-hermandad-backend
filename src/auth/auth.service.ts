@@ -5,6 +5,8 @@ import { JwtService } from '@nestjs/jwt';
 
 import { PrismaService } from '../prisma.service.js';
 import { LoginUserDto } from './dto/login-user.dto.js';
+import { LoginPinDto } from './dto/login-pin.dto.js';
+import { PosPinService } from '../users/pos-pin/pos-pin.service.js';
 
 import type { User } from '../generated/prisma/client.js';
 import type { JwtPayload } from './interfaces/jwt-payload.interface.js';
@@ -14,6 +16,7 @@ export class AuthService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly posPinService: PosPinService,
   ) {}
 
   async login(loginUserDto: LoginUserDto) {
@@ -42,9 +45,25 @@ export class AuthService {
 
     return {
       token: this.getJWTToken({ id: user.id }),
-      // TODO: mapper a la nueva entidad
       user: UserMapper.withoutPosPin(user),
-      // user: UserMapper.toEntity(user),
+    };
+  }
+
+  async loginPin(loginPinDto: LoginPinDto) {
+    const { posPin } = loginPinDto;
+    const storeId = loginPinDto.storeId.toLowerCase();
+    const posPinLookup = this.posPinService.lookup(posPin, storeId);
+    const user = await this.prismaService.user.findUnique({
+      where: { storeId_posPinLookup: { storeId, posPinLookup } },
+    });
+
+    if (!user || !user.isActive || user.role !== 'CASHIER') {
+      throw new UnauthorizedException('Credenciales inválidas.');
+    }
+
+    return {
+      token: this.getJWTToken({ id: user.id }),
+      user: UserMapper.toStaffUserEntity(user),
     };
   }
 
