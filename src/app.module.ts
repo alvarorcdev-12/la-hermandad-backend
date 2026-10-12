@@ -6,6 +6,7 @@ import configuration from './config/configuration.js';
 import { PrismaService } from './prisma.service.js';
 import { SeedModule } from './seed/seed.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
+import { ProductsModule } from './products/products.module.js';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { CategoriesModule } from './categories/categories.module.js';
     AuthModule,
     SeedModule,
     CategoriesModule,
+    ProductsModule,
   ],
   providers: [PrismaService],
   exports: [PrismaService],
