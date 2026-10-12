@@ -1,4 +1,13 @@
-import { PartialType } from '@nestjs/mapped-types';
+import {
+  IntersectionType,
+  OmitType,
+  PartialType,
+  PickType,
+} from '@nestjs/mapped-types';
 import { CreateOrderDto } from './create-order.dto.js';
 
-export class UpdateOrderDto extends PartialType(CreateOrderDto) {}
+// Keep the amount optional without letting PartialType skip validation for null.
+export class UpdateOrderDto extends IntersectionType(
+  PartialType(OmitType(CreateOrderDto, ['discountAmount'] as const)),
+  PickType(CreateOrderDto, ['discountAmount'] as const),
+) {}

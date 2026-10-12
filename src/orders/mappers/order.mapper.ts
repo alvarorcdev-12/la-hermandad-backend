@@ -14,6 +14,8 @@ export class OrderMapper {
       name: order.orderName,
       itemCount: order.itemCount,
       subtotalPrice: order.subtotalPrice,
+      discountAmount: order.discountAmount,
+      discountReason: order.discountReason,
       totalPrice: order.totalPrice,
       email: order.email,
       phone: order.phone,

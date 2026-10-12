@@ -9,6 +9,8 @@ export class Order {
   name: string;
   itemCount: number;
   subtotalPrice: Decimal;
+  discountAmount: Decimal;
+  discountReason: string | null;
   totalPrice: Decimal;
   email: string | null;
   phone: string | null;

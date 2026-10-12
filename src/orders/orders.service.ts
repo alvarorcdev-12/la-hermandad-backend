@@ -66,7 +66,8 @@ export class OrdersService {
         where: { id: { in: items.map((item) => item.productId) }, storeId },
       });
       const orderItems = this.buildOrderItems(items, products);
-      const totals = this.calculatedOrder(orderItems);
+      const discount = this.resolveDiscount(createOrderDto);
+      const totals = this.calculatedOrder(orderItems, discount.discountAmount);
       await this.decrementInventory(tx, storeId, orderItems);
 
       return tx.order.create({
@@ -78,6 +79,7 @@ export class OrdersService {
           orderNumber,
           orderName: `${settings.orderPrefix}${orderNumber}${settings.orderSuffix}`,
           ...totals,
+          ...discount,
           email: email === undefined ? customer?.email : email,
           phone: phone === undefined ? customer?.phone : phone,
           note,
@@ -278,11 +280,26 @@ export class OrdersService {
   async update(id: string, updateOrderDto: UpdateOrderDto, storeId: string) {
     const { email, phone, note, customerId } = updateOrderDto;
     const order = await this.runTransaction(async (tx) => {
-      await this.getOrder(tx, id, storeId);
+      const currentOrder = await this.getOrder(tx, id, storeId);
+      const data: Prisma.OrderUncheckedUpdateInput = {
+        email, phone, note, customerId,
+      };
+      if (
+        updateOrderDto.discountAmount !== undefined ||
+        updateOrderDto.discountReason !== undefined
+      ) {
+        await this.assertUnpaidOpenOrder(tx, currentOrder);
+        const discount = this.resolveDiscount(updateOrderDto, currentOrder);
+        Object.assign(
+          data,
+          discount,
+          this.calculatedOrder(currentOrder.orderItems, discount.discountAmount),
+        );
+      }
       await this.resolveCustomer(tx, customerId, storeId);
       return tx.order.update({
         where: { id, storeId },
-        data: { email, phone, note, customerId },
+        data,
         include: this.orderInclude,
       });
     });
@@ -301,10 +318,10 @@ export class OrdersService {
         where: { id: { in: addItemsDto.productIds }, storeId },
       });
       const orderItems = this.buildOrderItems(items, products);
-      const totals = this.calculatedOrder([
-        ...currentOrder.orderItems,
-        ...orderItems,
-      ]);
+      const totals = this.calculatedOrder(
+        [...currentOrder.orderItems, ...orderItems],
+        currentOrder.discountAmount,
+      );
       await this.decrementInventory(tx, storeId, orderItems);
       return tx.order.update({
         where: { id, storeId },
@@ -356,7 +373,7 @@ export class OrdersService {
       if (newQuantity > 0) {
         items.push({ ...currentItem, quantity: newQuantity, totalPrice });
       }
-      const totals = this.calculatedOrder(items);
+      const totals = this.calculatedOrder(items, currentOrder.discountAmount);
       if (delta === 0) return currentOrder;
 
       if (currentItem.product.trackInventory) {
@@ -697,8 +714,35 @@ export class OrdersService {
     }
   }
 
+  private resolveDiscount(
+    input: Pick<CreateOrderDto, 'discountAmount' | 'discountReason'>,
+    current?: Pick<Order, 'discountAmount' | 'discountReason'>,
+  ) {
+    if (
+      input.discountAmount !== undefined &&
+      typeof input.discountAmount !== 'number'
+    ) {
+      throw new BadRequestException(
+        'El descuento debe ser un número y no puede ser null.',
+      );
+    }
+    const discountAmount =
+      input.discountAmount === undefined
+        ? current?.discountAmount ?? new Decimal(0)
+        : new Decimal(input.discountAmount);
+    this.validateMoney(discountAmount, true);
+    const discountReason =
+      discountAmount.isZero()
+        ? null
+        : input.discountReason === undefined
+          ? current?.discountReason ?? null
+          : input.discountReason;
+    return { discountAmount, discountReason };
+  }
+
   private calculatedOrder(
     orderItems: { quantity: number; unitPrice: Decimal; totalPrice: Decimal }[],
+    discountAmount: Decimal,
   ) {
     let itemCount = 0;
     let subtotalPrice = new Decimal(0);
@@ -716,7 +760,17 @@ export class OrdersService {
     }
     this.validateQuantity(itemCount);
     this.validateMoney(subtotalPrice);
-    return { itemCount, subtotalPrice, totalPrice: subtotalPrice };
+    this.validateMoney(discountAmount, true);
+    if (discountAmount.greaterThanOrEqualTo(subtotalPrice)) {
+      throw new BadRequestException(
+        'El descuento debe ser menor que el subtotal del pedido. Ajusta el descuento antes de reducir los artículos.',
+      );
+    }
+    return {
+      itemCount,
+      subtotalPrice,
+      totalPrice: subtotalPrice.minus(discountAmount),
+    };
   }
 
   private buildDateFilter(startDate?: string, endDate?: string) {
