@@ -1,8 +1,14 @@
 import * as bcrypt from 'bcrypt';
-import type { UserCreateInput } from '../../generated/prisma/models.js';
+import type {
+  CategoryCreateInput,
+  ProductCreateManyInput,
+  UserCreateInput,
+} from '../../generated/prisma/models.js';
 
 interface SeedData {
   user: UserCreateInput;
+  category: (storeId: string) => CategoryCreateInput;
+  products: (storeId: string, categoryId: string) => ProductCreateManyInput[];
 }
 
 export const initialData: SeedData = {
@@ -27,5 +33,29 @@ export const initialData: SeedData = {
         },
       },
     },
+  },
+  category: (storeId: string) => ({
+    name: 'Empanadas',
+    store: { connect: { id: storeId } },
+  }),
+  products: (storeId: string, categoryId: string) => {
+    return [
+      {
+        title: 'Empanada de carne',
+        price: 5,
+        trackInventory: true,
+        inventoryQuantity: 250,
+        storeId,
+        categoryId,
+      },
+      {
+        title: 'Empanada de pollo',
+        price: 5,
+        trackInventory: true,
+        inventoryQuantity: 250,
+        storeId,
+        categoryId,
+      },
+    ];
   },
 };

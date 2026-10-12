@@ -12,7 +12,13 @@ export class SeedService {
       await this.deleteTables();
 
       // Insertar usuarios, store,setting, location por defecto
-      await this.insertUserAndStore();
+      const storeId = await this.insertUserAndStore();
+
+      // Insertamos categorias
+      const categoryId = await this.insertCategories(storeId);
+
+      // Insertamos productos
+      await this.insertProducts(storeId, categoryId);
 
       return {
         ok: true,
@@ -31,8 +37,26 @@ export class SeedService {
   private async insertUserAndStore() {
     const seedUser = initialData.user;
 
-    await this.prismaService.user.create({
+    const user = await this.prismaService.user.create({
       data: seedUser,
+    });
+
+    return user.storeId;
+  }
+
+  private async insertCategories(storeId: string) {
+    const seedCategory = initialData.category(storeId);
+
+    const category = await this.prismaService.category.create({
+      data: seedCategory,
+    });
+
+    return category.id;
+  }
+
+  private async insertProducts(storeId: string, categoryId: string) {
+    await this.prismaService.product.createMany({
+      data: initialData.products(storeId, categoryId),
     });
   }
 }
