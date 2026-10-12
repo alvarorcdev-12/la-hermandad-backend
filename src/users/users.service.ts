@@ -72,7 +72,7 @@ export class UsersService {
         : {};
 
     const existUser =
-      email === undefined
+      email === null
         ? null
         : await this.prismaService.user.findFirst({
             where: {
