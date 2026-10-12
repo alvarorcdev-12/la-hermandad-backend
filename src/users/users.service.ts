@@ -1,9 +1,3 @@
-import { Prisma } from '../generated/prisma/client.js';
-import { PosPinService } from './pos-pin/pos-pin.service.js';
-import {
-  POS_PIN_PATTERN,
-  POS_PIN_MESSAGE,
-} from './pos-pin/pos-pin.validation.js';
 import {
   BadRequestException,
   ConflictException,
@@ -13,10 +7,17 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma.service.js';
+import { Prisma, type User } from '../generated/prisma/client.js';
+import { PosPinService } from './pos-pin/pos-pin.service.js';
+import {
+  POS_PIN_PATTERN,
+  POS_PIN_MESSAGE,
+} from './pos-pin/pos-pin.validation.js';
 
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { PaginationDto } from '../common/dto/pagination.dto.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
 
 import { UserMapper } from './mappers/user.mapper.js';
 import { DBExceptionHelper } from '../common/helpers/db-exception.helper.js';
@@ -267,6 +268,78 @@ export class UsersService {
       });
 
       return UserMapper.toStaffUserEntity(deleteUser);
+    } catch (error) {
+      DBExceptionHelper.handle(error);
+    }
+  }
+
+  // Profile
+  async getMyDataUser(user: User) {
+    return await this.findOne(user.id, user.storeId);
+  }
+
+  async updateProfile(updateUserDto: UpdateUserDto, user: User) {
+    const { firstName, lastName, email, phone } = updateUserDto;
+
+    try {
+      const updateProfile = await this.prismaService.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          firstName,
+          lastName,
+          email,
+          phone,
+        },
+      });
+
+      return UserMapper.toEntity(updateProfile);
+    } catch (error) {
+      DBExceptionHelper.handle(error);
+    }
+  }
+
+  async changePassword(changePasswordDto: ChangePasswordDto, user: User) {
+    const currentUser = await this.prismaService.user.findFirstOrThrow({
+      where: {
+        id: user.id,
+        storeId: user.storeId,
+      },
+    });
+
+    const isMatchPassword = bcrypt.compareSync(
+      changePasswordDto.currentPassword,
+      currentUser.password!,
+    );
+
+    if (!isMatchPassword) {
+      throw new BadRequestException('La contraseña actual es incorrecta');
+    }
+
+    if (changePasswordDto.newPassword === changePasswordDto.currentPassword) {
+      throw new BadRequestException(
+        'La nueva contraseña debe ser diferente de la contraseña actual',
+      );
+    }
+
+    const hashPassword = bcrypt.hashSync(changePasswordDto.newPassword, 10);
+
+    try {
+      const updateUser = await this.prismaService.user.update({
+        where: {
+          id: user.id,
+          storeId: user.storeId,
+        },
+        data: {
+          password: hashPassword,
+        },
+        include: {
+          store: true,
+        },
+      });
+
+      return UserMapper.toStaffUserEntity(updateUser);
     } catch (error) {
       DBExceptionHelper.handle(error);
     }

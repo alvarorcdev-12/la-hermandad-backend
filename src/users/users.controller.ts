@@ -12,12 +12,15 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { UsersService } from './users.service.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
-import { UpdateUserDto } from './dto/update-user.dto.js';
 import { PaginationDto } from '../common/dto/pagination.dto.js';
+import { UpdateUserDto } from './dto/update-user.dto.js';
 
 import { Auth } from '../auth/decorators/auth.decorator.js';
 import { GetUser } from '../auth/decorators/get-user.decorator.js';
+
+import type { User } from '../generated/prisma/client.js';
 
 @Controller('users')
 export class UsersController {
@@ -51,7 +54,10 @@ export class UsersController {
 
   @Auth('OWNER', 'MANAGER')
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string, @GetUser('storeId') storeId: string) {
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('storeId') storeId: string,
+  ) {
     return this.usersService.findOne(id, storeId);
   }
 
@@ -76,7 +82,32 @@ export class UsersController {
 
   @Auth('OWNER')
   @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string, @GetUser('storeId') storeId: string) {
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('storeId') storeId: string,
+  ) {
     return this.usersService.remove(id, storeId);
+  }
+
+  // PROFILE
+  @Auth()
+  @Get('me')
+  getMyDataUser(@GetUser() user: User) {
+    return this.usersService.getMyDataUser(user);
+  }
+
+  @Auth()
+  @Patch('me')
+  updateMyData(@Body() updateUserDto: UpdateUserDto, @GetUser() user: User) {
+    return this.usersService.updateProfile(updateUserDto, user);
+  }
+
+  @Auth()
+  @Patch('me/password')
+  changePassword(
+    @Body() changePasswordDto: ChangePasswordDto,
+    @GetUser() user: User,
+  ) {
+    return this.usersService.changePassword(changePasswordDto, user);
   }
 }
