@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { UsersService } from './users.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
@@ -40,19 +41,32 @@ export class UsersController {
 
   @Auth('OWNER', 'MANAGER')
   @Get(':id')
-  findOne(@Param('id') id: string, @GetUser('storeId') storeId: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string, @GetUser('storeId') storeId: string) {
     return this.usersService.findOne(id, storeId);
   }
 
   @Auth('OWNER')
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.usersService.update(id, updateUserDto, storeId);
+  }
+
+  @Auth('OWNER')
+  @Patch(':id/status')
+  changeActiveStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.usersService.changeActiveStatus(id, storeId);
   }
 
   @Auth('OWNER')
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  remove(@Param('id', ParseUUIDPipe) id: string, @GetUser('storeId') storeId: string) {
+    return this.usersService.remove(id, storeId);
   }
 }

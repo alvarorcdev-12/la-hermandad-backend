@@ -7,6 +7,7 @@ import { UpdateUserDto } from './dto/update-user.dto.js';
 import { PaginationDto } from '../common/dto/pagination.dto.js';
 
 import { UserMapper } from './mappers/user.mapper.js';
+import { DBExceptionHelper } from '../common/helpers/db-exception.helper.js';
 
 import type {
   UserOrderByWithRelationInput,
@@ -98,9 +99,6 @@ export class UsersService {
         orderBy,
         skip: (page - 1) * limit,
         take: limit,
-        include: {
-          store: true,
-        },
       }),
     ]);
 
@@ -124,9 +122,6 @@ export class UsersService {
         id: id,
         storeId: storeId,
       },
-      include: {
-        store: true,
-      },
     });
 
     if (!user) {
@@ -136,11 +131,65 @@ export class UsersService {
     return UserMapper.toStaffUserEntity(user);
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async update(id: string, updateUserDto: UpdateUserDto, storeId: string) {
+    try {
+      const updateUser = await this.prismaService.user.update({
+        where: {
+          id: id,
+          storeId: storeId,
+        },
+        data: {
+          firstName: updateUserDto.firstName,
+          lastName: updateUserDto.lastName,
+          email: updateUserDto.email,
+          phone: updateUserDto.phone,
+          role: updateUserDto.role,
+        },
+      });
+
+      return UserMapper.toStaffUserEntity(updateUser);
+    } catch (error) {
+      DBExceptionHelper.handle(error);
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async changeActiveStatus(id: string, storeId: string) {
+    const user = await this.findOne(id, storeId);
+
+    try {
+      const updateUser = await this.prismaService.user.update({
+        where: {
+          id: id,
+          storeId: storeId,
+        },
+        data: {
+          isActive: !user.isActive,
+        },
+        include: {
+          store: true,
+        },
+      });
+
+      return UserMapper.toStaffUserEntity(updateUser);
+    } catch (error) {
+      DBExceptionHelper.handle(error);
+    }
+  }
+
+  async remove(id: string, storeId: string) {
+    await this.findOne(id, storeId);
+
+    try {
+      const deleteUser = await this.prismaService.user.delete({
+        where: {
+          id: id,
+          storeId: storeId,
+        },
+      });
+
+      return UserMapper.toStaffUserEntity(deleteUser);
+    } catch (error) {
+      DBExceptionHelper.handle(error);
+    }
   }
 }
