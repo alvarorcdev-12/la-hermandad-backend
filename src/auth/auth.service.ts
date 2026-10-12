@@ -24,9 +24,6 @@ export class AuthService {
 
     const user = await this.prismaService.user.findUnique({
       where: { email: email },
-      include: {
-        store: true,
-      },
     });
 
     if (!user) {
@@ -45,7 +42,7 @@ export class AuthService {
 
     return {
       token: this.getJWTToken({ id: user.id }),
-      user: UserMapper.withoutPosPin(user),
+      user: UserMapper.toEntity(user),
     };
   }
 
@@ -70,7 +67,7 @@ export class AuthService {
   checkAuthStatus(user: User) {
     return {
       token: this.getJWTToken({ id: user.id }),
-      user: UserMapper.withoutPosPin(user),
+      user: UserMapper.toEntity(user),
     };
   }
 
