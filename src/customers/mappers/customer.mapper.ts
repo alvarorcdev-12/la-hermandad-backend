@@ -27,7 +27,7 @@ export class CustomerMapper {
 
     return {
       id: customer.id,
-      displayName: `${customer.firstName} ${customer.lastName || ''}`,
+      displayName: `${customer.firstName} ${customer.lastName || ''}`.trim(),
       firstName: customer.firstName,
       lastName: customer.lastName,
       email: customer.email,
