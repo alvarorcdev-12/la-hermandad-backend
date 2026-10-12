@@ -7,6 +7,7 @@ import { PrismaService } from './prisma.service.js';
 import { SeedModule } from './seed/seed.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { ProductsModule } from './products/products.module.js';
+import { CustomersModule } from './customers/customers.module.js';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ProductsModule } from './products/products.module.js';
     SeedModule,
     CategoriesModule,
     ProductsModule,
+    CustomersModule,
   ],
   providers: [PrismaService],
   exports: [PrismaService],
