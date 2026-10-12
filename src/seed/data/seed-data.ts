@@ -1,6 +1,7 @@
 import * as bcrypt from 'bcrypt';
 import type {
   CategoryCreateInput,
+  CustomerCreateManyInput,
   ProductCreateManyInput,
   UserCreateInput,
 } from '../../generated/prisma/models.js';
@@ -9,6 +10,7 @@ interface SeedData {
   user: UserCreateInput;
   category: (storeId: string) => CategoryCreateInput;
   products: (storeId: string, categoryId: string) => ProductCreateManyInput[];
+  customers: (storeId: string) => CustomerCreateManyInput[];
 }
 
 export const initialData: SeedData = {
@@ -55,6 +57,22 @@ export const initialData: SeedData = {
         inventoryQuantity: 250,
         storeId,
         categoryId,
+      },
+    ];
+  },
+  customers: (storeId: string) => {
+    return [
+      {
+        firstName: 'Juan',
+        lastName: 'Perez',
+        email: 'juanperez@google.com',
+        storeId,
+      },
+      {
+        firstName: 'Roberto',
+        lastName: 'Ruiz',
+        email: 'robert@google.com',
+        storeId,
       },
     ];
   },

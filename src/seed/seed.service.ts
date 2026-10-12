@@ -20,6 +20,9 @@ export class SeedService {
       // Insertamos productos
       await this.insertProducts(storeId, categoryId);
 
+      // Insertamos clientes
+      await this.insertCustomers(storeId);
+
       return {
         ok: true,
         message: 'SEED EXECUTED',
@@ -57,6 +60,12 @@ export class SeedService {
   private async insertProducts(storeId: string, categoryId: string) {
     await this.prismaService.product.createMany({
       data: initialData.products(storeId, categoryId),
+    });
+  }
+
+  private async insertCustomers(storeId: string) {
+    await this.prismaService.customer.createMany({
+      data: initialData.customers(storeId),
     });
   }
 }
