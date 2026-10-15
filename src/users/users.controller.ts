@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Header,
   HttpCode,
@@ -25,6 +26,35 @@ import type { User } from '../generated/prisma/client.js';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Auth()
+  @Get('me/pos-pin')
+  @Header('Cache-Control', 'no-store')
+  getMyPosPin(
+    @GetUser('id') id: string,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.usersService.getPosPin(id, storeId);
+  }
+
+  @Auth('OWNER')
+  @Get(':id/pos-pin')
+  @Header('Cache-Control', 'no-store')
+  getEmployeePosPin(
+    @Param(
+      'id',
+      new ParseUUIDPipe({
+        exceptionFactory: () =>
+          new BadRequestException(
+            'El identificador del usuario debe ser un UUID válido.',
+          ),
+      }),
+    )
+    id: string,
+    @GetUser('storeId') storeId: string,
+  ) {
+    return this.usersService.getPosPin(id, storeId);
+  }
 
   @Auth('OWNER')
   @Post('generate-pin')

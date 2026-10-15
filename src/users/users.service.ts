@@ -34,6 +34,22 @@ export class UsersService {
     private readonly posPinService: PosPinService,
   ) {}
 
+  async getPosPin(id: string, storeId: string): Promise<{ pin: string }> {
+    const user = await this.prismaService.user.findFirst({
+      where: { id, storeId },
+      select: { posPinEncrypted: true },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Usuario no encontrado');
+    }
+    if (user.posPinEncrypted === null) {
+      throw new BadRequestException('El usuario no tiene un PIN POS asignado.');
+    }
+
+    return { pin: this.posPinService.decrypt(user.posPinEncrypted, storeId) };
+  }
+
   async generatePin(storeId: string) {
     for (let attempt = 0; attempt < 20; attempt++) {
       const pin = this.posPinService.generate();

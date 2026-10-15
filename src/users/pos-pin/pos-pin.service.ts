@@ -2,6 +2,7 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   createCipheriv,
+  createDecipheriv,
   createHmac,
   randomBytes,
   randomInt,
@@ -37,6 +38,37 @@ export class PosPinService {
       cipher.getAuthTag().toString('base64'),
       encrypted.toString('base64'),
     ].join('.');
+  }
+
+  decrypt(encryptedPin: string, storeId: string): string {
+    try {
+      const { encryptionKey } = this.keys();
+      const parts = encryptedPin.split('.');
+      const [version, nonce, tag, ciphertext] = parts;
+      if (parts.length !== 4 || version !== 'v1' || !nonce || !tag || !ciphertext) {
+        throw new Error();
+      }
+
+      const nonceBuffer = Buffer.from(nonce, 'base64');
+      const tagBuffer = Buffer.from(tag, 'base64');
+      if (nonceBuffer.length !== 12 || tagBuffer.length !== 16) {
+        throw new Error();
+      }
+
+      const decipher = createDecipheriv('aes-256-gcm', encryptionKey, nonceBuffer);
+      decipher.setAAD(Buffer.from(storeId));
+      decipher.setAuthTag(tagBuffer);
+      const pin = Buffer.concat([
+        decipher.update(Buffer.from(ciphertext, 'base64')),
+        decipher.final(),
+      ]).toString('utf8');
+      if (!/^[0-9]{6}$/.test(pin)) {
+        throw new Error();
+      }
+      return pin;
+    } catch {
+      throw new InternalServerErrorException('No se pudo consultar el PIN POS.');
+    }
   }
 
   private keys() {
