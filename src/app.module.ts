@@ -1,15 +1,16 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import configuration from './config/configuration.js';
 
 import { AuthModule } from './auth/auth.module.js';
-import configuration from './config/configuration.js';
-import { PrismaService } from './prisma.service.js';
-import { SeedModule } from './seed/seed.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
-import { ProductsModule } from './products/products.module.js';
 import { CustomersModule } from './customers/customers.module.js';
-import { UsersModule } from './users/users.module.js';
 import { OrdersModule } from './orders/orders.module.js';
+import { ProductsModule } from './products/products.module.js';
+import { SaludModule } from './salud/salud.module.js';
+import { SeedModule } from './seed/seed.module.js';
+import { UsersModule } from './users/users.module.js';
+import { PrismaService } from './prisma.service.js';
 
 @Module({
   imports: [
@@ -19,12 +20,13 @@ import { OrdersModule } from './orders/orders.module.js';
       load: [configuration],
     }),
     AuthModule,
-    SeedModule,
     CategoriesModule,
-    ProductsModule,
     CustomersModule,
-    UsersModule,
     OrdersModule,
+    ProductsModule,
+    SaludModule,
+    SeedModule,
+    UsersModule,
   ],
   providers: [PrismaService],
   exports: [PrismaService],
