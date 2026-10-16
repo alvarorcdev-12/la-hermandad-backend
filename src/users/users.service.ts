@@ -150,7 +150,7 @@ export class UsersService {
     const { page = 1, limit = 10, q, sort, direction } = paginationDto;
 
     const orderBy: UserOrderByWithRelationInput = {
-      [sort ?? 'createdAt']: direction ?? 'desc',
+      [sort ?? 'createdAt']: direction ?? 'asc',
     };
 
     const where: UserWhereInput = {
