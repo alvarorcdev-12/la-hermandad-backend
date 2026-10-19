@@ -4,6 +4,12 @@ export default () => ({
   api: {
     prefix: process.env.API_PREFIX || 'api',
   },
+  swagger: {
+    enabled:
+      process.env.NODE_ENV !== 'production' &&
+      process.env.SWAGGER_ENABLED === 'true',
+    serverUrl: process.env.SWAGGER_SERVER_URL,
+  },
   posPin: {
     encryptionKey: process.env.POS_PIN_ENCRYPTION_KEY,
     lookupKey: process.env.POS_PIN_LOOKUP_KEY,

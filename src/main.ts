@@ -1,3 +1,4 @@
+import { setupSwagger } from './config/swagger.js';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { ConfigService } from '@nestjs/config';
@@ -18,6 +19,8 @@ async function bootstrap() {
     }),
   );
   app.enableCors();
+
+  setupSwagger(app);
 
   await app.listen(port);
 }

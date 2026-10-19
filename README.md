@@ -80,3 +80,46 @@ Necesitas Node.js 24, pnpm y Docker con Docker Compose.
      -H 'Content-Type: application/json' \
      -d '{"email":"alvaro@google.com","password":"123456"}'
    ```
+
+## Documentación OpenAPI (Swagger)
+
+Se documentan las **43 operaciones HTTP** de autenticación, usuarios, categorías,
+productos, clientes, pedidos, salud y seed, con sus contratos actuales y roles.
+
+1. Configura `SWAGGER_ENABLED=true` en desarrollo y reinicia la aplicación.
+2. Abre `/<API_PREFIX>/docs` para Swagger UI o `/<API_PREFIX>/docs-json` para el
+   documento OpenAPI. Con la configuración local anterior son
+   `http://localhost:3000/api/docs` y `http://localhost:3000/api/docs-json`.
+3. La API utiliza Bearer JWT; el esquema `bearer` documenta el header
+   `Authorization`. Los JWT emitidos duran 24 horas. Los roles aparecen en cada
+   descripción y en la extensión `x-roles` del documento.
+
+Swagger está apagado por defecto y **siempre deshabilitado con
+`NODE_ENV=production`**, incluso si `SWAGGER_ENABLED=true`. Esta política incluye
+UI, JSON y recursos de Swagger. No cambia el acceso a los endpoints del negocio.
+La interfaz no conserva autorización y no permite ejecutar solicitudes; esto
+incluye el seed destructivo. El JSON puede importarse en clientes HTTP.
+
+`SWAGGER_SERVER_URL` es opcional: configura el origen/base real del despliegue
+**sin `API_PREFIX`**, porque las rutas generadas ya contienen ese prefijo. Si está
+vacío, se usa `/` (el mismo origen), sin inventar hosts. No hay versionado de rutas.
+No introduzcas credenciales en esa URL. La versión del documento es `0.0.1`, igual
+que `package.json`.
+
+Los cuerpos son JSON. Las respuestas monetarias de Prisma Decimal son cadenas;
+las entradas monetarias son números. Los listados usan `{ meta, results }`.
+Las anotaciones respetan las validaciones existentes, incluyendo los `null`
+aceptados por `IsOptional`; aceptar un valor en el DTO no garantiza que una regla
+posterior o una columna de base de datos permita guardarlo.
+
+```bash
+pnpm run test:openapi
+```
+
+Esta verificación compila con Nest y ejecuta Vitest sobre el JavaScript emitido
+para conservar los metadatos reales de decoradores. No utiliza PostgreSQL:
+sustituye Prisma, genera el documento completo y comprueba rutas, esquemas,
+autenticación, validación y acceso a Swagger. No ejecuta seed ni migraciones.
+El runner Vitest habitual y sus suites permanecen separados.
+
+Consulta las [inconsistencias funcionales documentadas](docs/api-contract-notes.md).
